@@ -1,0 +1,67 @@
+# ============================================================
+#  Secretos / claves de API
+# ============================================================
+# Nunca subir la API key de TMDB al repositorio.
+.env
+.env.*
+!.env.example
+
+# ============================================================
+#  Python
+# ============================================================
+# Caché de bytecode.
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Entornos virtuales.
+.venv/
+venv/
+env/
+ENV/
+
+# Cachés de herramientas (pytest, mypy, ruff, notebooks).
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Distribución / empaquetado.
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# ============================================================
+#  Datos generados por el pipeline
+# ============================================================
+# Todo el contenido se regenera ejecutando:
+#   python cargar_datos.py
+#   python scraping_criticas.py
+#   python limpiar_datos.py
+datosDescargados/
+
+# ============================================================
+#  Artefactos de Quarto (generados)
+# ============================================================
+# Se regeneran con `quarto render presentacion.qmd`.
+# Solo se versiona el fuente (presentacion.qmd).
+presentacion.html
+presentacion_files/
+
+# ============================================================
+#  Notas personales / borradores (no forman parte del entregable)
+# ============================================================
+Tareas.md
+puntoA.md
+enlacesHTML.txt
+
+# ============================================================
+#  Sistema operativo / editores
+# ============================================================
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+.idea/
+.vscode/

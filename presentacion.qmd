@@ -1,0 +1,285 @@
+---
+title: "Trabajo 2: Diseño, Implementación y Evaluación de un Sistema RAG"
+subtitle: "El cine de ciencia ficción y los miedos a la innovación y los avances tecnológicos. Presentación: 27  de noviembre"
+author: "Jose Ramon, Guillermo, Dylan, Tomas"
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-location: left
+    toc-depth: 3
+    number-sections: true
+    code-fold: false
+---
+
+# Resumen del proyecto {.unnumbered}
+
+> **→ Pendiente:** confirmar/ajustar este párrafo antes de la entrega.
+
+
+
+# Introducción y Objetivos
+
+Siguiendo el hilo conductor de la temática del primer trabajo (**cine**), el objetivo de esta segunda práctica es construir y desplegar un sistema RAG completo que demuestre **empíricamente su superioridad** frente a un LLM base sin contexto externo:
+
+- **Mitigar alucinaciones.**
+- **Aportar información especializada y actualizada** sobre nuestro dominio.
+
+## Temática y subtema
+
+- **Tema general:** Cine 🎬
+- **Subtema:** *El cine de ciencia ficción y los miedos a la innovación y los avances tecnológicos*
+- **Foco concreto:** la **inteligencia artificial** como manifestación actual de ese miedo.
+
+**Objetivo del corpus:**
+Recopilar textos que permitan estudiar **cómo el cine de ciencia ficción representa los temores sociales ante la innovación y los avances tecnológicos**, y **cómo han cambiado esos miedos a lo largo del tiempo**.
+
+> **→ Pendiente:** El de revisar esta seccion para el final
+
+::: {.callout-note title="💡 Por qué acotar a la IA"}
+Acotar el miedo general a la tecnología hacia la **IA** evita que todos los textos repitan la misma idea básica y que el corpus se disperse en otras ramas (viajes espaciales, extraterrestres, catástrofes climáticas).
+:::
+
+## ¿Qué información recopilamos y por qué?
+
+El corpus cumple **dos requisitos** del enunciado:
+
+- **Enriquecido** → variedad de fuentes (prensa, crítica, ámbito académico, público), de tipos de texto y de perspectivas (alarmistas, éticas, críticas). Así los textos **no dicen todos lo mismo**.
+- **Específico** → todos los textos giran en torno al **miedo a la innovación y a los avances tecnológicos**, sin dispersarse en otros tópicos de la ciencia ficción.
+
+**Resultado:** 7 documentos + datos estructurados (metadatos y reseñas) de IMDb/TMDB.
+
+## Los 7 documentos del corpus (texto)
+
+| # | Documento | Tipo de fuente | Eje temático |
+|---|---|---|---|
+| 1 | *2001: Una odisea del espacio* — crítica (Espinof) | Crítica cinematográfica | IA (HAL 9000) |
+| 2 | *2001* — opiniones de espectadores (SensaCine) | Opinión del público | IA |
+| 3 | *2001* — tesis (Repositorio UACM, PDF) | Investigación académica | Cibernética / máquina |
+| 4 | *El miedo a la tecnología, de la escritura al 5G* (La Vanguardia) | Periodismo divulgativo | Miedos históricos a la tecnología |
+| 5 | *Ex Machina* — crítica (Roger Ebert) | Crítica | IA / relación humano-máquina |
+| 6 | *Miedo a la tecnología: películas* (Revista Central) | Artículo divulgativo | Miedos a la tecnología |
+| 7 | *Upgrade* — crítica (El Cuervo Enteradillo) | Crítica (blog) | IA / cuerpo aumentado |
+
+::: {.callout-important title="🎯 Explicar en la defensa"}
+Esta tabla es la **mejor evidencia** de "corpus enriquecido y específico": 4 tipos de fuente distintos y, a la vez, todo gira sobre el miedo a la tecnología/IA. Relacionar cada fila con `TARGETS` de `scraping_criticas.py` (líneas ~83–126).
+:::
+
+## De la planificación al corpus real
+
+Las listas de "qué recopilar" se convirtieron en el corpus real. La planificación cubría **dos ramas**:
+
+1. **IA** (autómatas de *Metrópolis*, HAL 9000, *Blade Runner*, *Ex Machina*, *Her*, *Terminator*…)
+2. **Miedos y evolución** (deshumanización industrial, complejo de Frankenstein, biotecnología, vigilancia…)
+
+Los 7 documentos finales **combinan ambas ramas**: IA como foco + contexto histórico de los miedos tecnológicos (La Vanguardia, Revista Central).
+
+::: {.callout-note title="💡 Conexión con los datos estructurados"}
+Además de los 7 textos, se capturan **metadatos y reseñas de IMDb/TMDB** para enriquecer el corpus y permitir filtrar por película, año o género en la recuperación (filtros de metadatos → Fase E).
+:::
+
+# Fases del Proyecto
+
+## Fase A: Captación Automatizada de Datos (Data Pipeline)
+
+La Fase A cubre **tres scripts automatizados** que se ejecutan en cadena:
+
+1. **`cargar_datos.py`** → descarga IMDb (datasets) + TMDB (API).
+2. **`scraping_criticas.py`** → extrae los 7 textos de crítica/reseña de la web.
+3. **`limpiar_datos.py`** → limpia y normaliza todo a `./datosDescargados/limpio`.
+
+::: {.callout-important title="🎯 Explicar en la defensa"}
+El punto fuerte de la Fase A es la **automatización completa**: ningún fichero se añade a mano. Mostrar el orden de ejecución (`python cargar_datos.py` → `python scraping_criticas.py` → `python limpiar_datos.py`).
+:::
+
+### Tipos de fuentes utilizadas
+
+El enunciado permite 4 tipos de fuentes. Nosotros usamos **3 de ellas**:
+
+| Tipo (enunciado) | Qué usamos | Script |
+|---|---|---|
+| Datasets estructurados | IMDb datasets oficiales (`title.basics.tsv.gz`, `title.ratings.tsv.gz`) | `cargar_datos.py` |
+| APIs públicas | TMDB API v3 (metadatos, sinopsis, keywords y **reseñas**) | `cargar_datos.py` |
+| Extracción web (scraping) | 6 webs de crítica + 1 PDF académico | `scraping_criticas.py` |
+| Documentos no estructurados (PDF) | Tesis UACM (extraída con `pypdf`) | `scraping_criticas.py` |
+
+### `cargar_datos.py`: IMDb (datasets oficiales)
+
+```python
+# cargar_datos.py · cargar_basics()  (líneas ~245–268)
+mascara = (
+    (df["titleType"] == "movie")            # solo películas
+    & df["genres"].str.contains("Sci-Fi")   # género ciencia ficción
+    & (df["isAdult"] == "0")                # excluye contenido adulto
+)
+df = df.loc[mascara]
+```
+
+::: {.callout-important title="🎯 Explicar en la defensa"}
+Aquí está el **primer filtro de especificidad**: de todo IMDb (millones de títulos) nos quedamos solo con **películas de ciencia ficción**. Mencionar `descargar_archivo()` (~210–229): descarga con `stream=True` + barra de progreso `tqdm`, y **omite re-descargar** si el fichero ya existe.
+:::
+
+### `cargar_datos.py`: TMDB (API v3)
+
+```python
+# cargar_datos.py · tmdb_get()  (líneas ~339–355)
+for intento in range(reintentos):
+    r = session.get(url, params=params, timeout=30)
+    if r.status_code == 200:
+        time.sleep(TMDB_PAUSA)        # respeta el rate-limit (~4 req/s)
+        return r.json()
+    if r.status_code in (429, 500, 502, 503, 504) and intento < reintentos - 1:
+        time.sleep(2 ** intento)      # backoff exponencial
+        continue
+    r.raise_for_status()
+```
+
+::: {.callout-important title="🎯 Explicar en la defensa"}
+Robustez frente al **rate-limit de TMDB**: pausa entre peticiones + reintentos con *backoff exponencial*. Destacar también:
+- `PELICULAS_CANONICAS` (~147–182): lista de películas canónicas de IA que siempre se incluyen.
+- `TERMINOS_IA` / `TMDB_TERMINOS_KEYWORD` (~114–142): resolución de términos → keywords para marcar `relevante_ia`.
+- `construir_cruce()` (~558–614): **cruce IMDb ↔ TMDB** por `imdb_id`.
+:::
+
+### Por qué no hay reseñas de IMDb
+
+::: {.callout-note title="💡 Decisión técnica a mencionar"}
+IMDb **no ofrece API pública de reseñas** y su web está protegida por AWS WAF (anti-bot, devuelve HTTP 202). Por eso:
+- De **IMDb** → solo datos estructurados y ratings oficiales.
+- Las **reseñas de texto** se obtienen de **TMDB** (que sí las expone en su API).
+- Ambos se enlazan en `cruceIMDBTMDB.csv`.
+:::
+
+### `scraping_criticas.py`: los 7 textos
+
+```python
+# scraping_criticas.py · TARGETS  (líneas ~83–126)
+("Ex Machina (Roger Ebert)", "Roger Ebert (vía Wayback Machine)",
+ WAYBACK_ROGEREBERT, "rogerebert"),
+```
+
+Cada fila de `TARGETS` = un documento del corpus, con su **extractor específico**:
+
+```python
+EXTRACTORES = {
+    "espinof": extraer_espinof, "sensacine": extraer_sensacine,
+    "lavanguardia": extraer_lavanguardia, "revistacentral": extraer_revistacentral,
+    "rogerebert": extraer_rogerebert, "blogspot": extraer_blogspot,
+}
+```
+
+::: {.callout-important title="🎯 Explicar en la defensa"}
+Cada web tiene una estructura distinta → **un extractor por sitio** con BeautifulSoup. Casos especiales a destacar:
+- **Roger Ebert** bloquea scraping (Cloudflare 403) → se usa la copia de **Wayback Machine** (`WAYBACK_ROGEREBERT`).
+- **Tesis UACM** → `extraer_pdf()` (~290–317) descarga en streaming y extrae texto con `pypdf`.
+- **Provenance** → `guardar()` (~174–190) escribe cabecera `Título/Fuente/URL/Autor/Fecha` para rastrear el origen de cada fragmento.
+:::
+
+### `limpiar_datos.py`: filtros y normalización
+
+```python
+# limpiar_datos.py · limpiar_csvs()  (líneas ~276–292)
+tiene_nota = cruce["rating_imdb"].notna() | cruce["rating_tmdb"].notna()
+votos      = cruce[["votos_imdb", "votos_tmdb"]].fillna(0).max(axis=1)
+has_review = cruce["imdb_id"].isin(review_imdb_ids) | cruce["imdb_id"].isin(scraped_count)
+conservar  = tiene_nota & (votos >= UMBRAL_VOTOS | has_review)
+master     = cruce.loc[conservar]
+```
+
+::: {.callout-important title="🎯 Explicar en la defensa"}
+La limpieza elimina **nulos, duplicados, reseñas vacías (< 80 car.) y títulos "ruidosos"** (sin nota ni reseña y con < 1000 votos). En textos scrapeados, `_BOILERPLATE` (~146–162) quita pies de página, suscripciones y avisos legales; en la tesis, `_TESIS_FRONTMATTER` (~174–187) quita portada e índice.
+:::
+
+### Resultados del pipeline (números reales)
+
+| Dato | Antes | Después |
+|---|---|---|
+| IMDb películas (Sci-Fi) | 16 759 | **2 397** |
+| TMDB películas | 177 | 177 |
+| TMDB reseñas | 482 | **458** |
+| Cruce IMDb↔TMDB | 16 813 | **2 451** |
+| Críticas scrapeadas | 7 | **7** (232 052 caracteres) |
+
+- **164 películas** marcadas como relevantes a IA.
+- **59 películas** con reseña de texto asociada.
+
+::: {.callout-note title="💡 Cómo usarlos en la defensa"}
+Estos números salen de `datosDescargados/limpio/resumen_limpieza.txt` y demuestran la **robustez de la automatización** (uno de los criterios de evaluación).
+:::
+
+### Automatización obligatoria
+
+- **Sin carga manual de ficheros:** todo se descarga, scrapea y limpia por script.
+- **Clave de TMDB** gestionada con `.env` (`python-dotenv`); sin clave, el script sigue funcionando solo con IMDb y avisa.
+- **Idempotencia:** los ficheros ya descargados se omiten (`descargar_archivo` comprueba si existe).
+
+```bash
+python cargar_datos.py      # 1) IMDb + TMDB + cruce
+python scraping_criticas.py # 2) 7 textos de crítica
+python limpiar_datos.py     # 3) limpieza → ./datosDescargados/limpio
+```
+
+::: {.callout-important title="🎯 Explicar en la defensa"}
+Enseñar este orden de ejecución y recalcar que **se puede repetir de cero** sin intervención manual: es lo que pide el criterio "robustez de la automatización en la ingesta".
+:::
+
+## Fase B: Arquitectura RAG y Estrategia de Chunking
+
+**→ Pendiente**
+
+- [ ] **Librería de orquestación:** LangChain / LlamaIndex / Haystack → elegir y justificar.
+- [ ] **Base de datos vectorial:** ChromaDB / FAISS / Qdrant / Milvus / Pinecone → elegir y justificar.
+- [ ] **Estrategia de chunking:** fixed-size con solapamiento / semántico / Markdown-recursive → justificar cómo el tamaño del chunk afecta al contexto y la recuperación.
+- [ ] Extractos de código comentados (chunking + embeddings + indexado).
+
+## Fase C: Evaluación Comparativa (Sin RAG vs Con RAG)
+
+**→ Pendiente**
+
+- [ ] **Banco de pruebas:** 5–10 preguntas específicas y complejas de nicho (que un LLM genérico no responde bien).
+- [ ] **Modelo sin RAG:** mostrar alucinaciones / falta de conocimiento.
+- [ ] **Modelo con RAG:** mostrar recuperación correcta + respuesta citando fragmentos.
+- [ ] Capturas / tabla comparativa (pregunta → sin RAG → con RAG).
+
+## Fase D: Interfaz de Usuario y Despliegue
+
+**→ Pendiente**
+
+- [ ] **App web interactiva** en tiempo real: Streamlit o Gradio.
+- [ ] **Despliegue público:** Hugging Face Spaces / Streamlit Community Cloud / equivalente.
+- [ ] Enlace directo a la app + captura de la interfaz.
+
+## Fase E: Técnicas Avanzadas de RAG (Opcional)
+
+**→ Pendiente**
+
+- [ ] **Reranking:** Cohere Rerank / FlashRank.
+- [ ] **Filtros de metadatos:** por categoría, fecha o etiqueta antes de la recuperación.
+- [ ] **RAG adaptativo / híbrido:** decidir si buscar o no, o combinar BM25 + vectorial (hybrid search).
+- [ ] Justificar cuáles se implementan y por qué (puntuación extra).
+
+# Documentación y Entrega (Quarto y GitHub)
+
+**→ Pendiente**
+
+- [ ] **Estructura del repositorio** (carpeta `/rag_project`): scripts, config, interfaz, `requirements.txt`.
+- [ ] **Web Quarto** con: motivación y procedencia, pipeline, chunking, evaluación comparativa, enlaces, extractos de código.
+- [ ] **Publicación online:** GitHub Pages / Quarto Pub → compartir URL en Loop.
+
+# Exposición y Criterios de Evaluación
+
+**→ Pendiente**
+
+- [ ] **Fecha:** 27 de noviembre.
+- [ ] **Reparto de roles** (uno por miembro):
+  - Captación y pipeline de datos →
+  - Vector DB, chunking y librerías →
+  - Interfaz y despliegue →
+  - Evaluación comparativa y técnicas avanzadas →
+- [ ] **Criterios a cubrir:** automatización robusta, fundamentación técnica, claridad de la comparativa, calidad de la interfaz, documentación y dominio individual.
+
+# Enlaces {.unnumbered}
+
+- Repositorio GitHub → **→ Pendiente**
+- Web Quarto → **→ Pendiente**
+- App desplegada → **→ Pendiente**
