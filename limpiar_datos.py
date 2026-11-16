@@ -17,10 +17,9 @@ Lee los ficheros generados por `cargar_datos.py` y `scraping_criticas.py`
        - Películas sin nota (ni `rating_imdb` ni `rating_tmdb`).
        - Reseñas vacías o demasiado cortas (ruido para el LLM).
     2. Se descartan DUPLICADOS (filas repetidas y reseñas repetidas).
-    3. Se descartan las películas RUIDOSAS: sin reseña de texto y con
-       menos de UMBRAL_VOTOS votos (IMDb o TMDB).
-       -> Se conservan las películas con nota que además tienen reseña de
-          texto (TMDB o crítica scrapeada) O >= UMBRAL_VOTOS votos.
+    3. Se conservan SOLO las películas con reseña de texto (reseña de TMDB
+       o crítica scrapeada). Las películas que únicamente aportan metadatos
+       (título, año, nota, votos) sin texto recuperable se descartan.
     4. Se PRIORIZA la relevancia a IA/miedo tecnológico (columna
        `relevante_ia`), sin descartar el resto de la ciencia ficción.
     5. Se limpian los textos de las críticas scrapeadas: se eliminan pies
@@ -73,11 +72,6 @@ F_TMDB = CARPETA_DATOS / "tmdb_peliculas.csv"
 F_REVIEWS = CARPETA_DATOS / "tmdb_reviews.csv"
 F_CRUCE = CARPETA_DATOS / "cruceIMDBTMDB.csv"
 
-# Umbral de votos: una película se considera "con suficiente información" si
-# tiene >= esta cantidad de votos en IMDb o en TMDB (evita incluir títulos
-# oscuros con 5 votos que solo aportan ruido al RAG).
-UMBRAL_VOTOS = 1000
-
 # Las reseñas más cortas que esto se descartan (son ruido: "Awesome!",
 # "Boring crap.", etc., no aportan contenido al LLM).
 MIN_LONGITUD_REVIEW = 80
@@ -110,6 +104,11 @@ CRITICA_A_IMDB = {
     # Upgrade (El Cuervo Enteradillo).
     "upgrade": "tt6499752",
     "cuervo": "tt6499752",
+    # Blade Runner y Blade Runner 2049 (CinemaNet, análisis). Importa el
+    # orden: "blade runner 2049" debe comprobarse antes que "blade runner".
+    "blade runner 2049": "tt1856101",
+    "blade runner": "tt0083658",
+    "cinemanet": "tt0083658",
 }
 
 # Título correcto de la tesis (el PDF expone el encabezado de la universidad
@@ -184,6 +183,13 @@ _TESIS_FRONTMATTER = [
     r"para fines educativos", r"uso de su contenido", r"citar esta fuente",
     r"quien haga uso de la", r"29 de enero de 2002", r"^20\d\d$",
     r"^[ií]ndice$",
+    # --- TFG UCM (Word): portada, resumen y palabras clave ---
+    r"universidad complutense de madrid",
+    r"facultad de ciencias de la informaci[oó]n",
+    r"trabajo fin de grado", r"comunicaci[oó]n audiovisual",
+    r"^autora?:", r"^tutor:", r"^nota:", r"^resumen$",
+    r"^palabras clave:?", r"^keywords:?", r"^abstract$",
+    r"^grado en ",
 ]
 
 
@@ -199,6 +205,8 @@ _TESIS_FRONT_RE = _compilar(_TESIS_FRONTMATTER)
 _RE_PAGINA = re.compile(r"^\s*~?\s*\d{1,3}\s*~?\s*$")
 # Solo marcadores con virgulilla "~ N ~" (los usa la TOC / saltos de página).
 _RE_PAGINA_TILDE = re.compile(r"^\s*~\s*\d+\s*~\s*$")
+# Entradas de índice con puntos guía "...." (TFG UCM generado desde Word).
+_RE_DOT_LEADER = re.compile(r"\.{4,}")
 
 
 def _es_boilerplate(parrafo: str) -> bool:
@@ -281,19 +289,19 @@ def limpiar_csvs() -> dict:
         cruce[col] = pd.to_numeric(cruce[col], errors="coerce")
 
     tiene_nota = cruce["rating_imdb"].notna() | cruce["rating_tmdb"].notna()
-    votos = cruce[["votos_imdb", "votos_tmdb"]].fillna(0).max(axis=1)
-    tiene_votos = votos >= UMBRAL_VOTOS
 
     has_review = (
         cruce["imdb_id"].isin(review_imdb_ids)
         | cruce["imdb_id"].isin(set(scraped_count))
     )
 
-    conservar = tiene_nota & (tiene_votos | has_review)
+    # Solo se conservan las películas con reseña de texto (TMDB o scrapeada).
+    # Las que únicamente aportan metadatos (título/año/nota/votos) se descartan.
+    conservar = tiene_nota & has_review
 
     master = cruce.loc[conservar].copy()
     stats["cruce_sin_nota"] = int((~tiene_nota).sum())
-    stats["cruce_ruidosas"] = int((tiene_nota & ~(tiene_votos | has_review)).sum())
+    stats["cruce_sin_review"] = int((tiene_nota & ~has_review).sum())
 
     # Columnas consolidadas.
     master["titulo_original"] = master["titulo_original_imdb"].fillna(
@@ -404,7 +412,7 @@ def _parsear_cabecera(texto: str) -> tuple[dict[str, str], str]:
     meta: dict[str, str] = {}
     idx = 0
     campos = {"titulo": "titulo", "fuente": "fuente", "url": "url",
-              "autor": "autor", "fecha": "fecha"}
+              "autor": "autor", "fecha": "fecha", "duracion": "duracion"}
     while idx < len(lineas):
         linea = lineas[idx].strip()
         m = re.match(r"^([^:]+):\s*(.*)$", linea)
@@ -419,8 +427,11 @@ def _parsear_cabecera(texto: str) -> tuple[dict[str, str], str]:
     return meta, cuerpo
 
 
-def limpiar_texto_critica(cuerpo: str, fuente: str, es_pdf: bool = False) -> tuple[str, str | None]:
+def limpiar_texto_critica(cuerpo: str, fuente: str, es_pdf: bool = False,
+                          es_tfg: bool = False) -> tuple[str, str | None]:
     """Limpia el cuerpo de una crítica y devuelve (cuerpo, autor_detectado)."""
+    if es_tfg:
+        return _limpiar_cuerpo_pdf_ucm(cuerpo), None
     if es_pdf:
         return _limpiar_cuerpo_pdf(cuerpo), None
 
@@ -475,6 +486,26 @@ def _reunir_lineas_pdf(texto: str) -> list[str]:
     return parrafos
 
 
+def _es_linea_toc(linea: str) -> bool:
+    """True si una línea (tras "ÍNDICE") pertenece a la tabla de contenidos.
+
+    Detecta: líneas vacías, números de página, puntos guía "...." y títulos en
+    mayúsculas (las entradas del índice van en mayúsculas, mientras que el
+    cuerpo empieza con prosa en minúsculas).
+    """
+    s = linea.strip()
+    if not s:
+        return True
+    if _RE_PAGINA.match(s):
+        return True
+    if _RE_DOT_LEADER.search(s):
+        return True
+    letras = [c for c in s if c.isalpha()]
+    if letras and sum(c.isupper() for c in letras) / len(letras) > 0.7:
+        return True
+    return False
+
+
 def _limpiar_cuerpo_pdf(cuerpo: str) -> str:
     """Limpia el cuerpo de un PDF académico (tesis): quita portada, aviso
     legal, índice (TOC) y números de página, y reune los párrafos cortados."""
@@ -509,6 +540,44 @@ def _limpiar_cuerpo_pdf(cuerpo: str) -> str:
     return "\n\n".join(limpios)
 
 
+def _limpiar_cuerpo_pdf_ucm(cuerpo: str) -> str:
+    """Limpia el cuerpo de un TFG (PDF generado desde Word, p. ej. Docta UCM):
+    quita portada, resumen, palabras clave, índice (puntos guía) y números de
+    página, y reune los párrafos cortados."""
+    lineas = cuerpo.split("\n")
+
+    # 1) Recortar portada + resumen + palabras clave: todo hasta "ÍNDICE".
+    i_indice = next(
+        (i for i, l in enumerate(lineas)
+         if l.strip().lower() in ("índice", "indice")),
+        None,
+    )
+    if i_indice is not None:
+        lineas = lineas[i_indice + 1:]
+
+    # 2) Quitar las entradas del índice (líneas de TOC, puntos guía, páginas).
+    i = 0
+    while i < len(lineas) and _es_linea_toc(lineas[i]):
+        i += 1
+    lineas = lineas[i:]
+
+    # 3) Re-unir líneas cortadas en párrafos reales.
+    parrafos = _reunir_lineas_pdf("\n".join(lineas))
+
+    # 4) Quitar números de página, front matter residual y boilerplate.
+    limpios: list[str] = []
+    for p in parrafos:
+        p = normalizar_espacios(p)
+        if not p:
+            continue
+        if _RE_PAGINA.match(p) or _RE_DOT_LEADER.search(p):
+            continue
+        if _es_frontmatter_tesis(p) or _es_boilerplate(p):
+            continue
+        limpios.append(p)
+    return "\n\n".join(limpios)
+
+
 def limpiar_criticas() -> dict:
     """Limpia cada .txt de críticas y genera un manifiesto. Devuelve stats."""
     CARPETA_CRITICAS_LIMPIO.mkdir(parents=True, exist_ok=True)
@@ -524,11 +593,14 @@ def limpiar_criticas() -> dict:
         fuente = meta.get("fuente", "")
 
         # Casos especiales.
-        es_pdf = "uacm" in sin_acentos(f.name).lower()
+        n = sin_acentos(f.name).lower()
+        es_pdf = "uacm" in n
+        es_tfg = "tfg" in n
         if es_pdf:
             meta["titulo"] = TITULO_TESIS
 
-        cuerpo_limpio, autor_det = limpiar_texto_critica(cuerpo, fuente, es_pdf=es_pdf)
+        cuerpo_limpio, autor_det = limpiar_texto_critica(
+            cuerpo, fuente, es_pdf=es_pdf, es_tfg=es_tfg)
         if autor_det:
             meta.setdefault("autor", autor_det)
         if es_pdf and "autor" not in meta:
@@ -542,6 +614,8 @@ def limpiar_criticas() -> dict:
             cabecera.append("Autor: " + meta["autor"])
         if meta.get("fecha"):
             cabecera.append("Fecha: " + meta["fecha"])
+        if meta.get("duracion"):
+            cabecera.append("Duración: " + meta["duracion"])
         salida = "\n".join(cabecera) + "\n\n" + cuerpo_limpio.strip() + "\n"
 
         destino = CARPETA_CRITICAS_LIMPIO / f.name
@@ -554,6 +628,7 @@ def limpiar_criticas() -> dict:
             "fuente": meta.get("fuente", ""),
             "autor": meta.get("autor", ""),
             "fecha": meta.get("fecha", ""),
+            "duracion": meta.get("duracion", ""),
             "url": meta.get("url", ""),
             "imdb_id": imdb_id or "",
             "n_caracteres_limpio": len(cuerpo_limpio),
@@ -577,9 +652,8 @@ def escribir_resumen(stats_csv: dict, stats_crit: dict) -> None:
     lineas.append("=" * 70)
     lineas.append("")
     lineas.append("Criterios aplicados:")
-    lineas.append("  - Se conservan solo películas CON nota (IMDb o TMDB).")
-    lineas.append(f"  - Se descartan las ruidosas: sin reseña de texto y con "
-                  f"< {UMBRAL_VOTOS} votos.")
+    lineas.append("  - Se conservan SOLO películas con reseña de texto (TMDB o crítica scrapeada).")
+    lineas.append("  - Se descartan las películas que solo aportan metadatos (sin texto recuperable).")
     lineas.append(f"  - Se descartan reseñas vacías o < {MIN_LONGITUD_REVIEW} caracteres.")
     lineas.append("  - Se eliminan duplicados y nulos.")
     lineas.append("  - Se marca relevante_ia (prioridad, sin descartar el resto).")
@@ -594,7 +668,7 @@ def escribir_resumen(stats_csv: dict, stats_crit: dict) -> None:
     lineas.append(f"  Cruce registros: {stats_csv.get('cruce_original', 0)} -> "
                   f"{stats_csv.get('cruce_final', 0)}")
     lineas.append(f"    (sin nota: {stats_csv.get('cruce_sin_nota', 0)} | "
-                  f"ruidosas: {stats_csv.get('cruce_ruidosas', 0)})")
+                  f"sin reseña: {stats_csv.get('cruce_sin_review', 0)})")
     lineas.append(f"  Relevantes a IA: {stats_csv.get('relevantes_ia', 0)}")
     lineas.append(f"  Con reseña de texto: {stats_csv.get('con_review', 0)}")
     lineas.append("")

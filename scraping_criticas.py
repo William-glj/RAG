@@ -24,6 +24,12 @@ Notas:
   redirige a un PDF académico sin relación). Se omite y se avisa al final.
 - El PDF del repositorio UACM se descarga en streaming (es un servidor lento)
   y su texto se extrae con pypdf.
+- Además de las críticas, se procesan los análisis de CinemaNet (Blade Runner
+  y Blade Runner 2049), The Conversation y el TFG del repositorio Docta (UCM).
+  Se descartan los enlaces fuera de tema (tutorial de sentiment analysis,
+  artículo de negocios) y los listicles poco densos (ver ENLACES_PENDIENTES).
+- Los vídeos de YouTube se transcriben descargando sus subtítulos (manuales o
+  automáticos) en español con yt-dlp y convirtiéndolos a texto plano.
 
 Uso:
     python scraping_criticas.py
@@ -39,6 +45,13 @@ from pathlib import Path
 import requests
 from bs4 import BeautifulSoup
 from pypdf import PdfReader
+
+try:
+    import yt_dlp
+    TIENE_YTDLP = True
+except ImportError:  # pragma: no cover
+    yt_dlp = None
+    TIENE_YTDLP = False
 
 # Consola con acentos correctos en Windows.
 if hasattr(sys.stdout, "reconfigure"):
@@ -106,12 +119,6 @@ TARGETS = [
         "lavanguardia",
     ),
     (
-        "Miedo a la tecnologia - peliculas (Revista Central)",
-        "Revista Central",
-        "https://www.revistacentral.com.mx/en-corto/miedo-tecnologia-peliculas/",
-        "revistacentral",
-    ),
-    (
         "Ex Machina (Roger Ebert)",
         "Roger Ebert (vía Wayback Machine)",
         WAYBACK_ROGEREBERT,
@@ -123,14 +130,62 @@ TARGETS = [
         "https://elcuervoenteradillo.blogspot.com/2018/09/critica-upgrade.html",
         "blogspot",
     ),
+    # --- Análisis de fondo (los mejores, todos sobre el miedo a la tecnología) --
+    (
+        "Inteligencia artificial y cine - dilemas eticos (TFG UCM)",
+        "Repositorio Docta UCM",
+        "https://docta.ucm.es/rest/api/core/bitstreams/c49d45b9-5f05-481e-bc55-2bc17c23bf16/content",
+        "pdf",
+    ),
+    (
+        "El futuro de la robotica en las distopias cinematograficas (The Conversation)",
+        "The Conversation",
+        "https://theconversation.com/el-futuro-de-la-robotica-en-las-distopias-cinematograficas-129052",
+        "theconversation",
+    ),
+    (
+        "Blade Runner (1982) - la apoteosis de lo humano (CinemaNet)",
+        "CinemaNet",
+        "https://www.cinemanet.info/2017/11/analisis-blade-runner-la-apoteosis-de-lo-humano/",
+        "cinemanet",
+    ),
+    (
+        "Blade Runner 2049 - la apoteosis de lo humano (CinemaNet)",
+        "CinemaNet",
+        "https://www.cinemanet.info/2018/01/analisis-blade-runner-2049-la-apoteosis-de-lo-humano-2a-parte/",
+        "cinemanet",
+    ),
 ]
 
-# Enlaces que no se pudieron procesar (se informa al final).
-ENLACES_PENDIENTES = [
-    "https://share.google/6Rqwgfbprt0uiEJ4L  (enlace inválido: el dominio "
-    "'share.google' no existe y redirige a un PDF académico sin relación; "
-    "revisa si era un enlace de Google Drive y pásame la URL correcta)",
+# Metadatos conocidos de PDFs académicos cuyos metadatos embebidos no son
+# fiables (p. ej. el autor del PDF de Word no es el autor del trabajo).
+META_PDF = {
+    "Inteligencia artificial y cine - dilemas eticos (TFG UCM)": {
+        "titulo": "Inteligencia artificial y cine: dilemas éticos a través de "
+                  "Metrópolis, 2001: Odisea en el espacio y Blade Runner",
+        "autor": "Laura Meseguer Sánchez",
+        "fecha": "2025-05-26",
+    },
+}
+
+# Vídeos de YouTube a transcribir. De cada uno se descargan los subtítulos
+# (manuales o, si no los hay, automáticos) en español y se convierten a texto.
+# Formato: (nombre_archivo, url).
+VIDEOS = [
+    (
+        "¿Por qué le tenemos miedo a la tecnología - hola internet ep 8 (YouTube)",
+        "https://www.youtube.com/watch?v=_SF5MY9OoEQ",
+    ),
 ]
+
+# Enlaces descartados por estar fuera del tema o rotos (se documentan para la
+# memoria, pero no se scrapean):
+#   - share.google/6Rqwgfbprt0uiEJ4L  -> dominio inválido (enlace roto).
+#   - Medium "Sentiment Analysis on IMDB Reviews" -> tutorial de ML, fuera de tema.
+#   - ADEN "2001 y el mundo de los negocios" -> enfoque empresarial, fuera de tema.
+#   - Revista Central "Miedo a la tecnología: películas" -> listicle de ~2K chars, poco denso.
+#   - YouTube "Top 10 Películas sobre Tecnología" y "10 Películas de Ciencia Ficción..." -> listicles.
+ENLACES_PENDIENTES: list[str] = []
 
 
 # --------------------------------------------------------------------------- #
@@ -173,7 +228,8 @@ def _texto_parrafos(contenedor) -> str:
 
 def guardar(nombre_archivo: str, titulo: str, fuente: str, url: str,
             cuerpo: str, autor: str | None = None,
-            fecha: str | None = None) -> Path:
+            fecha: str | None = None,
+            extra: dict[str, str] | None = None) -> Path:
     """Escribe la crítica en un .txt con cabecera de procedencia."""
     CARPETA_CRITICAS.mkdir(parents=True, exist_ok=True)
     destino = CARPETA_CRITICAS / f"{sanitizar(nombre_archivo)}.txt"
@@ -183,6 +239,9 @@ def guardar(nombre_archivo: str, titulo: str, fuente: str, url: str,
         lineas.append(f"Autor: {autor}")
     if fecha:
         lineas.append(f"Fecha: {fecha}")
+    if extra:
+        for clave, valor in extra.items():
+            lineas.append(f"{clave}: {valor}")
     cabecera = "\n".join(lineas)
 
     destino.write_text(cabecera + "\n\n" + cuerpo.strip() + "\n",
@@ -254,15 +313,6 @@ def extraer_lavanguardia(url: str):
     return titulo, cuerpo, None, None
 
 
-def extraer_revistacentral(url: str):
-    s = _soup(url)
-    h1 = s.select_one("h1")
-    titulo = h1.get_text(" ", strip=True) if h1 else "Sin título"
-    cont = s.select_one("article.b-article-body") or s.select_one("article")
-    cuerpo = _texto_parrafos(cont) if cont else ""
-    return titulo, cuerpo, None, None
-
-
 def extraer_rogerebert(url: str):
     # url ya apunta a la Wayback Machine.
     s = _soup(url)
@@ -285,6 +335,79 @@ def extraer_blogspot(url: str):
     cont = s.select_one("div.post-body")
     cuerpo = _texto_parrafos(cont) if cont else ""
     return titulo, cuerpo, None, None
+
+
+def _texto_articulo(contenedor) -> str:
+    """Extrae párrafos, encabezados y elementos de lista en orden del documento."""
+    partes = []
+    for el in contenedor.find_all(["p", "h1", "h2", "h3", "h4", "li"]):
+        txt = el.get_text(" ", strip=True)
+        if txt:
+            partes.append(txt)
+    return "\n\n".join(partes)
+
+
+def _meta_fecha(s) -> str | None:
+    """Fecha de publicación desde meta tags (OpenGraph / article / pubdate)."""
+    for sel in ("meta[property='article:published_time']",
+                "meta[property='og:published_time']",
+                "meta[name='date']",
+                "meta[name='pubdate']"):
+        el = s.select_one(sel)
+        if el and el.get("content"):
+            valor = el.get("content", "").strip()
+            # "2020-01-15..." o "20200115".
+            if re.match(r"^\d{4}-\d{2}-\d{2}", valor):
+                return valor[:10]
+            if re.match(r"^\d{8}$", valor):
+                return f"{valor[0:4]}-{valor[4:6]}-{valor[6:8]}"
+    return None
+
+
+def extraer_theconversation(url: str):
+    """Artículo de The Conversation."""
+    s = _soup(url)
+    h1 = s.select_one("h1")
+    titulo = h1.get_text(" ", strip=True) if h1 else "Sin título"
+    cont = s.select_one("div.content-body") or s.select_one("article")
+    if cont:
+        # Quitar pies de foto y embeds promocionales que se cuelan como <p>.
+        for malo in cont.select("figcaption, div.slot, div.inline-promos"):
+            malo.decompose()
+    cuerpo = _texto_articulo(cont) if cont else ""
+    autor = None
+    autor_el = s.select_one("meta[name='author']")
+    if autor_el:
+        autor = autor_el.get("content")
+    fecha = _meta_fecha(s)
+    return titulo, cuerpo, autor, fecha
+
+
+def extraer_cinemanet(url: str):
+    """Análisis de WordPress (CinemaNet)."""
+    s = _soup(url)
+    h1 = s.select_one("h1.entry-title") or s.select_one("h1")
+    titulo = h1.get_text(" ", strip=True) if h1 else "Sin título"
+    cont = (s.select_one("div.entry-content")
+            or s.select_one("div.post-content")
+            or s.select_one("div.td-post-content")
+            or s.select_one("article"))
+    if cont:
+        # Quitar navegación, botones de compartir, comentarios y relacionados.
+        for malo in cont.select(
+                "div.addtoany_share_save_container, div.sharedaddy, "
+                "div#comments, div.comment-respond, div#respond, "
+                "div.related, nav, aside, footer, div.jp-relatedposts, "
+                "div.wp-block-uagb-container"):
+            malo.decompose()
+    cuerpo = _texto_articulo(cont) if cont else ""
+    autor = None
+    autor_el = (s.select_one("a[rel=author]")
+                or s.select_one("a[href*='/author/']"))
+    if autor_el:
+        autor = autor_el.get_text(" ", strip=True)
+    fecha = _meta_fecha(s)
+    return titulo, cuerpo, autor, fecha
 
 
 def extraer_pdf(url: str, nombre_archivo: str):
@@ -314,17 +437,124 @@ def extraer_pdf(url: str, nombre_archivo: str):
         primera = paginas[0].strip().splitlines()
         primera = [l.strip() for l in primera if l.strip()]
         titulo = primera[0] if primera else nombre_archivo
-    return titulo or nombre_archivo, cuerpo, None, None
+
+    # Metadatos conocidos (título/author/fecha) para PDFs concretos.
+    autor = fecha = None
+    sobrante = META_PDF.get(nombre_archivo)
+    if sobrante:
+        titulo = sobrante["titulo"]
+        autor = sobrante.get("autor")
+        fecha = sobrante.get("fecha")
+
+    return titulo or nombre_archivo, cuerpo, autor, fecha
 
 
 EXTRACTORES = {
     "espinof": extraer_espinof,
     "sensacine": extraer_sensacine,
     "lavanguardia": extraer_lavanguardia,
-    "revistacentral": extraer_revistacentral,
     "rogerebert": extraer_rogerebert,
     "blogspot": extraer_blogspot,
+    "theconversation": extraer_theconversation,
+    "cinemanet": extraer_cinemanet,
 }
+
+
+# --------------------------------------------------------------------------- #
+# Transcripción de vídeos de YouTube
+# --------------------------------------------------------------------------- #
+
+_TAG_SUB = re.compile(r"<[^>]+>")
+_SOUND_SUB = re.compile(r"\[[^\]]*\]")
+_WEBVTT_META = re.compile(
+    r"^(WEBVTT|Kind:|Language:|NOTE|X-TIMESTAMP-MAP|align:|position:"
+    r"|line:|region:|vertical:|size:)", re.IGNORECASE)
+
+
+def subtitulos_a_texto(ruta: Path) -> str:
+    """Convierte un .srt/.vtt a texto plano (sin marcas de tiempo ni etiquetas)."""
+    cues: list[list[str]] = []
+    actual: list[str] = []
+    for linea in ruta.read_text(encoding="utf-8").splitlines():
+        s = linea.strip()
+        if not s:
+            if actual:
+                cues.append(actual)
+                actual = []
+            continue
+        if "-->" in s:  # línea de tiempo
+            if actual:
+                cues.append(actual)
+                actual = []
+            continue
+        if s.isdigit() and not actual:  # número de secuencia SRT
+            continue
+        if _WEBVTT_META.match(s):
+            continue
+        t = _TAG_SUB.sub("", s)
+        t = _SOUND_SUB.sub("", t)
+        t = re.sub(r"\s+", " ", t).strip()
+        if t:
+            actual.append(t)
+    if actual:
+        cues.append(actual)
+
+    texto: list[str] = []
+    for cue in cues:
+        fr = " ".join(cue).strip()
+        if fr and (not texto or texto[-1] != fr):
+            texto.append(fr)
+    return "\n".join(texto)
+
+
+def transcribir_video(nombre_archivo: str, url: str):
+    """Descarga subtítulos (manuales o automáticos) en español de un vídeo y
+    devuelve (titulo, autor, fecha, duracion, cuerpo)."""
+    if not TIENE_YTDLP:
+        raise RuntimeError("yt-dlp no está instalado (pip install yt-dlp)")
+
+    base = CARPETA_RAW / sanitizar(nombre_archivo)
+    CARPETA_RAW.mkdir(parents=True, exist_ok=True)
+
+    opts = {
+        "skip_download": True,
+        "writesubtitles": True,
+        "writeautomaticsub": True,
+        "subtitleslangs": ["es"],
+        "subtitlesformat": "srt",
+        "outtmpl": str(base),
+        "quiet": True,
+        "no_warnings": True,
+    }
+    with yt_dlp.YoutubeDL(opts) as ydl:
+        info = ydl.extract_info(url, download=True)
+
+    titulo = info.get("title") or nombre_archivo
+    autor = info.get("uploader") or info.get("channel") or None
+    fecha_raw = info.get("upload_date")
+    fecha = (f"{fecha_raw[0:4]}-{fecha_raw[4:6]}-{fecha_raw[6:8]}"
+             if fecha_raw and len(fecha_raw) >= 8 else None)
+    duracion = info.get("duration_string")
+
+    # Localizar el fichero de subtítulos generado por yt-dlp.
+    ruta_sub = None
+    for cand in (f"{base}.es.srt", f"{base}.es.vtt",
+                 f"{base}.es-orig.srt", f"{base}.es-orig.vtt"):
+        if Path(cand).exists():
+            ruta_sub = Path(cand)
+            break
+    if ruta_sub is None:
+        ruta_sub = next(
+            (p for p in CARPETA_RAW.glob(f"{sanitizar(nombre_archivo)}.*")
+             if p.suffix in (".srt", ".vtt")),
+            None,
+        )
+
+    if ruta_sub is None:
+        raise RuntimeError("no se pudieron descargar subtítulos en español")
+
+    cuerpo = subtitulos_a_texto(ruta_sub)
+    return titulo, autor, fecha, duracion, cuerpo
 
 
 # --------------------------------------------------------------------------- #
@@ -376,6 +606,38 @@ def main() -> None:
         for e in ENLACES_PENDIENTES:
             print(f"  - {e}")
 
+    # --- Vídeos de YouTube -------------------------------------------------- #
+    if VIDEOS:
+        print("\n" + "=" * 70)
+        print("TRANSCRIPCIÓN DE VÍDEOS DE YOUTUBE (corpus RAG)")
+        print("=" * 70)
+        if not TIENE_YTDLP:
+            print("  [aviso] yt-dlp no está instalado; se omiten los vídeos.")
+        else:
+            for nombre_archivo, url in VIDEOS:
+                print(f"\n- {nombre_archivo}")
+                print(f"  {url[:80]}{'...' if len(url) > 80 else ''}")
+                try:
+                    titulo, autor, fecha, duracion, cuerpo = transcribir_video(
+                        nombre_archivo, url)
+                    if not cuerpo.strip():
+                        raise RuntimeError("la transcripción quedó vacía")
+                    extra = {}
+                    if duracion:
+                        extra["Duración"] = duracion
+                    destino = guardar(nombre_archivo, titulo, "YouTube", url,
+                                      cuerpo, autor, fecha, extra)
+                    guardados.append(destino)
+                    print(f"  OK -> {destino.relative_to(RAIZ)} "
+                          f"({len(cuerpo)} caracteres)")
+                except Exception as exc:
+                    fallos.append((nombre_archivo, f"{type(exc).__name__}: {exc}"))
+                    print(f"  FALLO -> {type(exc).__name__}: {exc}")
+
+    print("\n" + "=" * 70)
+    print(f"Total de ficheros guardados: {len(guardados)}")
+    if fallos:
+        print(f"Total de fallos: {len(fallos)}")
     print("\nListo.")
 
 
