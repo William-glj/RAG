@@ -5,10 +5,12 @@ app.py
 
 Interfaz web (Fase D) del sistema RAG sobre cine de ciencia ficción e IA.
 
-Permite preguntar en tiempo real en tres modos:
-    - Con RAG:       recupera fragmentos del índice y responde con ellos.
-    - Sin RAG:       pregunta directamente al LLM (línea base).
-    - Comparar:      muestra ambas respuestas una al lado de la otra.
+Modos:
+    - Con RAG:      recupera fragmentos del índice y responde con ellos.
+    - Sin RAG:      pregunta directamente al LLM (línea base).
+    - Comparar:     muestra ambas respuestas una al lado de la otra.
+
+Proveedores: el configurado por defecto (LLM_*) o OpenRouter (OPENROUTER_*).
 
 Ejecución local:
     streamlit run app.py
@@ -22,7 +24,8 @@ import streamlit as st
 
 import config_rag as cfg
 from con_rag import SISTEMA as SISTEMA_CON_RAG, formatear_contexto
-from llm_comun import crear_cliente, preguntar
+from llm_comun import (NOMBRES_PROVEEDOR, PROVEEDORES, VARIABLES,
+                       crear_cliente, faltan_variables, preguntar)
 from rag_comun import EmbeddingsE5, abrir_base, construir_filtro
 from sin_rag import SISTEMA as SISTEMA_SIN_RAG
 
@@ -32,7 +35,6 @@ st.set_page_config(
     layout="wide",
 )
 
-VARIABLES_LLM = ("LLM_API_KEY", "LLM_BASE_URL", "LLM_MODEL")
 TIPOS = ["(todos)", "critica", "opinion_espectadores", "academico",
          "divulgacion", "resena", "ficha"]
 
@@ -45,9 +47,10 @@ def cargar_secretos() -> None:
     """En Streamlit Cloud las claves están en st.secrets; las pasamos al entorno
     para que llm_comun.py las lea igual que desde el fichero .env local."""
     try:
-        for clave in VARIABLES_LLM:
-            if clave in st.secrets:
-                os.environ[clave] = str(st.secrets[clave])
+        for variables in VARIABLES.values():
+            for clave in variables:
+                if clave in st.secrets:
+                    os.environ[clave] = str(st.secrets[clave])
     except Exception:
         pass  # sin secrets.toml: se usará el .env local
 
@@ -65,8 +68,9 @@ def obtener_base():
 
 
 @st.cache_resource
-def obtener_cliente():
-    return crear_cliente()
+def obtener_cliente(proveedor: str):
+    """Cliente y modelo por proveedor; cada proveedor tiene su propia caché."""
+    return crear_cliente(proveedor)
 
 
 # --------------------------------------------------------------------------- #
@@ -89,17 +93,18 @@ def recuperar(base, pregunta: str, k: int, filtro) -> list[dict]:
     ]
 
 
-def responder_sin_rag(cliente, pregunta: str) -> str:
-    return preguntar(cliente, SISTEMA_SIN_RAG, pregunta)
+def responder_sin_rag(cliente, modelo: str, pregunta: str) -> str:
+    return preguntar(cliente, modelo, SISTEMA_SIN_RAG, pregunta)
 
 
-def responder_con_rag(cliente, base, pregunta: str, k: int, filtro) -> tuple[str, list[dict]]:
+def responder_con_rag(cliente, modelo: str, base, pregunta: str, k: int,
+                      filtro) -> tuple[str, list[dict]]:
     fragmentos = recuperar(base, pregunta, k, filtro)
     if not fragmentos:
         return "No hay información suficiente en la base de datos.", []
     contexto = formatear_contexto([(f["_doc"], f["distancia"]) for f in fragmentos])
     usuario = f"Fragmentos:\n\n{contexto}\n\nPregunta: {pregunta}"
-    return preguntar(cliente, SISTEMA_CON_RAG, usuario), fragmentos
+    return preguntar(cliente, modelo, SISTEMA_CON_RAG, usuario), fragmentos
 
 
 # --------------------------------------------------------------------------- #
@@ -121,6 +126,7 @@ def mostrar_entrada(entrada: dict) -> None:
         st.write(entrada["pregunta"])
 
     with st.chat_message("assistant"):
+        st.caption(entrada["etiqueta"])
         if entrada["sin"] is not None and entrada["con"] is not None:
             col_sin, col_con = st.columns(2)
             with col_sin:
@@ -143,21 +149,12 @@ def main() -> None:
     st.caption("Sistema RAG sobre críticas, artículos, tesis, reseñas y fichas "
                "de películas. Compara las respuestas con y sin contexto.")
 
-    faltan = [v for v in VARIABLES_LLM if not os.getenv(v)]
-    if faltan:
-        st.error(f"Faltan variables del modelo: {', '.join(faltan)}. "
-                 "Configúralas en .env (local) o en Secrets (Streamlit Cloud).")
-        st.stop()
-
-    if not cfg.INDICE_DIR.exists():
-        st.error("No existe el índice vectorial (indice_chroma/). "
-                 "Ejecuta construir_indice.py y súbelo al repositorio.")
-        st.stop()
-
     st.session_state.setdefault("historial", [])
 
     with st.sidebar:
         st.header("Configuración")
+        proveedor = st.selectbox("Proveedor del LLM", PROVEEDORES,
+                                 format_func=lambda p: NOMBRES_PROVEEDOR[p])
         modo = st.radio("Modo", ["Con RAG", "Sin RAG", "Comparar ambos"], index=0)
         k = st.slider("Fragmentos a recuperar (k)", 1, 10, cfg.K_POR_DEFECTO)
         tipo = st.selectbox("Filtrar por tipo de documento", TIPOS)
@@ -166,22 +163,34 @@ def main() -> None:
             st.session_state.historial = []
             st.rerun()
 
+    faltan = faltan_variables(proveedor)
+    if faltan:
+        st.error(f"Faltan variables para {NOMBRES_PROVEEDOR[proveedor]}: "
+                 f"{', '.join(faltan)}. Configúralas en .env (local) o en "
+                 "Secrets (Streamlit Cloud).")
+        st.stop()
+
+    if not cfg.INDICE_DIR.exists():
+        st.error("No existe el índice vectorial (indice_chroma/). "
+                 "Ejecuta construir_indice.py y súbelo al repositorio.")
+        st.stop()
+
     filtro = construir_filtro(None if tipo == "(todos)" else tipo, solo_ia)
 
-    # Procesar la pregunta nueva antes de pintar el historial,
-    # así aparece el último mensaje en la posición correcta.
     pregunta = st.chat_input("Escribe una pregunta sobre cine de ciencia ficción e IA...")
     if pregunta:
-        entrada = {"pregunta": pregunta, "sin": None, "con": None, "fragmentos": []}
+        entrada = {"pregunta": pregunta, "etiqueta": "", "sin": None,
+                   "con": None, "fragmentos": []}
         try:
-            cliente = obtener_cliente()
+            cliente, modelo = obtener_cliente(proveedor)
+            entrada["etiqueta"] = f"{NOMBRES_PROVEEDOR[proveedor]} · modelo `{modelo}`"
             base = obtener_base() if modo != "Sin RAG" else None
             with st.spinner("Consultando el modelo..."):
                 if modo in ("Sin RAG", "Comparar ambos"):
-                    entrada["sin"] = responder_sin_rag(cliente, pregunta)
+                    entrada["sin"] = responder_sin_rag(cliente, modelo, pregunta)
                 if modo in ("Con RAG", "Comparar ambos"):
                     entrada["con"], entrada["fragmentos"] = responder_con_rag(
-                        cliente, base, pregunta, k, filtro)
+                        cliente, modelo, base, pregunta, k, filtro)
             st.session_state.historial.append(entrada)
         except Exception as exc:
             st.error(f"Error al consultar el modelo: {type(exc).__name__}: {exc}")

@@ -3,24 +3,26 @@
 con_rag.py
 ==========
 
-Script 2: recupera fragmentos del índice ChromaDB y los envía al modelo Llama
-como contexto. El modelo debe responder solo con esos fragmentos y citarlos.
+Script 2: recupera fragmentos del índice ChromaDB y los envía al modelo como
+contexto. El modelo debe responder solo con esos fragmentos y citarlos.
 
 Requisito: haber ejecutado antes construir_indice.py.
 
 Uso:
-    python con_rag.py                              # preguntas de config_rag.PREGUNTAS_PRUEBA
-    python con_rag.py "¿Qué nota tiene Upgrade?"   # una pregunta concreta
-    python con_rag.py "miedo a la IA" -k 3 --solo-ia
+    python con_rag.py                                          # proveedor por defecto
+    python con_rag.py --proveedor openrouter                   # usa OpenRouter
+    python con_rag.py --proveedor openrouter "¿Qué nota tiene Upgrade?"
+    python con_rag.py --proveedor openrouter "miedo a la IA" -k 3 --solo-ia
 """
 
 from __future__ import annotations
 
 import argparse
 import sys
+import time
 
 import config_rag as cfg
-from llm_comun import crear_cliente, guardar_resultados, preguntar
+from llm_comun import PROVEEDORES, crear_cliente, guardar_resultados, preguntar
 from rag_comun import EmbeddingsE5, abrir_base, construir_filtro
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -47,7 +49,8 @@ def formatear_contexto(resultados) -> str:
     return "\n\n".join(bloques)
 
 
-def responder(base, cliente, pregunta: str, k: int, filtro) -> tuple[str, str]:
+def responder(base, cliente, modelo: str, pregunta: str, k: int,
+              filtro) -> tuple[str, str]:
     """Devuelve (respuesta, fuentes usadas)."""
     resultados = base.similarity_search_with_score(pregunta, k=k, filter=filtro)
     if not resultados:
@@ -55,7 +58,7 @@ def responder(base, cliente, pregunta: str, k: int, filtro) -> tuple[str, str]:
 
     usuario = (f"Fragmentos:\n\n{formatear_contexto(resultados)}\n\n"
                f"Pregunta: {pregunta}")
-    respuesta = preguntar(cliente, SISTEMA, usuario)
+    respuesta = preguntar(cliente, modelo, SISTEMA, usuario)
     fuentes = " ; ".join(
         f"[{n}] {doc.metadata.get('titulo', '')} ({doc.metadata.get('tipo')})"
         for n, (doc, _) in enumerate(resultados, 1)
@@ -71,15 +74,18 @@ def main() -> None:
     ap.add_argument("--tipo", help="filtrar por tipo de documento")
     ap.add_argument("--solo-ia", action="store_true",
                     help="solo películas marcadas como relevantes a IA")
+    ap.add_argument("--proveedor", choices=PROVEEDORES, default="llm",
+                    help="proveedor del LLM (por defecto: llm)")
     ap.add_argument("--indice", default=cfg.INDICE_DIR)
     args = ap.parse_args()
 
-    if not cfg.INDICE_DIR.exists():
+    if not args.indice.exists():
         raise SystemExit("No existe el índice. Ejecutad antes: python construir_indice.py")
 
+    cliente, modelo = crear_cliente(args.proveedor)
     base = abrir_base(args.indice, EmbeddingsE5())
     filtro = construir_filtro(args.tipo, args.solo_ia)
-    cliente = crear_cliente()
+    print(f"Proveedor: {args.proveedor} | modelo: {modelo}")
 
     if args.pregunta:
         preguntas = [args.pregunta]
@@ -89,12 +95,21 @@ def main() -> None:
     filas = []
     for i, pregunta in enumerate(preguntas, 1):
         print(f"\n[{i}/{len(preguntas)}] {pregunta}")
-        respuesta, fuentes = responder(base, cliente, pregunta, args.k, filtro)
-        print(respuesta)
+        print("  Consultando al modelo...", flush=True)
+
+        inicio = time.time()
+        respuesta, fuentes = responder(base, cliente, modelo, pregunta, args.k, filtro)
+        print(f"  Tiempo de respuesta: {time.time() - inicio:.1f} s")
+
+        if respuesta:
+            print(respuesta)
+        else:
+            print("  [aviso] el modelo devolvió una respuesta vacía. Prueba otro "
+                  "modelo o aumenta MAX_TOKENS en llm_comun.py.")
         print(f"  Fuentes: {fuentes}")
         filas.append({"pregunta": pregunta, "respuesta": respuesta, "fuentes": fuentes})
 
-    ruta = guardar_resultados(filas, "con_rag.csv")
+    ruta = guardar_resultados(filas, "con_rag", args.proveedor)
     print(f"\nResultados guardados en {ruta}")
 
 
