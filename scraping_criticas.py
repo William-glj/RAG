@@ -83,6 +83,12 @@ WAYBACK_ROGEREBERT = (
     "https://www.rogerebert.com/reviews/ex-machina-2015"
 )
 
+# Copia archivada de Cinéfilos Frustrados (el sitio directo cierra la conexión).
+WAYBACK_CINEFILOS = (
+    "https://web.archive.org/web/20240713132824/"
+    "https://cinefilosfrustrados.com/critica-ex-machina-2014/"
+)
+
 
 # --------------------------------------------------------------------------- #
 # Objetivos de scraping
@@ -155,6 +161,55 @@ TARGETS = [
         "https://www.cinemanet.info/2018/01/analisis-blade-runner-2049-la-apoteosis-de-lo-humano-2a-parte/",
         "cinemanet",
     ),
+    # --- Enlaces nuevos (segunda tanda, de enlacesHTML.txt) ------------------
+    (
+        "2001 - Una odisea del espacio (Cine y Psicología)",
+        "Cine y Psicología",
+        "https://www.cineypsicologia.com/2012/10/2001-odisea-en-el-espacio-mis.html",
+        "blogspot",
+    ),
+    (
+        "Ex Machina (El Antepenúltimo Mohicano)",
+        "El Antepenúltimo Mohicano",
+        "https://www.elantepenultimomohicano.com/2015/02/critica-ex-machina.html",
+        "blogspot",
+    ),
+    (
+        "Ex Machina (Cinéfilos Frustrados)",
+        "Cinéfilos Frustrados (vía Wayback Machine)",
+        WAYBACK_CINEFILOS,
+        "wordpress",
+    ),
+    (
+        "Her (El Antepenúltimo Mohicano)",
+        "El Antepenúltimo Mohicano",
+        "https://www.elantepenultimomohicano.com/2014/02/her-critica.html",
+        "blogspot",
+    ),
+    (
+        "Her - análisis académico (UOC open access)",
+        "Repositorio UOC",
+        "https://openaccess.uoc.edu/server/api/core/bitstreams/1ae95eed-60e8-4087-85fb-fd03b56ebace/content",
+        "pdf",
+    ),
+    (
+        "Upgrade (El Contraplano)",
+        "El Contraplano",
+        "https://elcontraplano.com/2018/08/22/upgrade-vivir-para-la-tecnologia/",
+        "wordpress",
+    ),
+    (
+        "Upgrade - implantes de inteligencia artificial (Cinemas Comics)",
+        "Cinemas Comics",
+        "https://www.cinemascomics.com/pelicula-de-ciencia-ficcion-sobre-implantes-de-inteligencia-artificial-que-mejoran-a-los-humanos/",
+        "wordpress",
+    ),
+    (
+        "Blade Runner - análisis filosófico (Proyecto Scio UCV)",
+        "Proyecto Scio UCV",
+        "https://proyectoscio.ucv.es/filosofia-y-cine/blade-runner-un-analisis-filosofico/",
+        "wordpress",
+    ),
 ]
 
 # Metadatos conocidos de PDFs académicos cuyos metadatos embebidos no son
@@ -175,6 +230,18 @@ VIDEOS = [
     (
         "¿Por qué le tenemos miedo a la tecnología - hola internet ep 8 (YouTube)",
         "https://www.youtube.com/watch?v=_SF5MY9OoEQ",
+    ),
+    (
+        "Upgrade - vídeo sobre implantes de inteligencia artificial (YouTube)",
+        "https://www.youtube.com/watch?v=9TfNhfKNZmU",
+    ),
+    (
+        "Vídeo extra 2 - miedo a la tecnología (YouTube)",
+        "https://www.youtube.com/watch?v=sTRZc-HqhoQ",
+    ),
+    (
+        "Vídeo extra 3 - miedo a la tecnología (YouTube)",
+        "https://www.youtube.com/watch?v=CJoYTIud4ns",
     ),
 ]
 
@@ -410,6 +477,35 @@ def extraer_cinemanet(url: str):
     return titulo, cuerpo, autor, fecha
 
 
+def extraer_wordpress(url: str):
+    """Artículo genérico de WordPress (blog/crítica con permalink de entrada)."""
+    s = _soup(url)
+    h1 = s.select_one("h1.entry-title") or s.select_one("h1")
+    titulo = h1.get_text(" ", strip=True) if h1 else "Sin título"
+    cont = (s.select_one("div.entry-content")
+            or s.select_one("div.post-content")
+            or s.select_one("main.site-main")
+            or s.select_one("article.hentry")
+            or s.select_one("div.td-post-content")
+            or s.select_one("article"))
+    if cont:
+        # Quitar widgets de compartir, comentarios y navegación que se cuelan.
+        for malo in cont.select(
+                "div.addtoany_share_save_container, div.sharedaddy, "
+                "div#comments, div.comment-respond, div#respond, "
+                "div.comments-area, article.comment-body, section.comments, "
+                "nav, aside, footer, div.related"):
+            malo.decompose()
+    cuerpo = _texto_articulo(cont) if cont else ""
+    autor = None
+    autor_el = (s.select_one("a[rel=author]")
+                or s.select_one("a[href*='/author/']"))
+    if autor_el:
+        autor = autor_el.get_text(" ", strip=True)
+    fecha = _meta_fecha(s)
+    return titulo, cuerpo, autor, fecha
+
+
 def extraer_pdf(url: str, nombre_archivo: str):
     """Descarga el PDF en streaming y extrae todo su texto con pypdf."""
     destino = CARPETA_RAW / f"{sanitizar(nombre_archivo)}.pdf"
@@ -457,6 +553,7 @@ EXTRACTORES = {
     "blogspot": extraer_blogspot,
     "theconversation": extraer_theconversation,
     "cinemanet": extraer_cinemanet,
+    "wordpress": extraer_wordpress,
 }
 
 
