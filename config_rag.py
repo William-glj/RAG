@@ -52,8 +52,9 @@ LOTE_CHROMA = 500          # fragmentos por lote al insertar en Chroma
 # --------------------------------------------------------------------------- #
 # Chunking
 # --------------------------------------------------------------------------- #
-# Punto de partida (se valida con comparar_chunking.py):
-#   - 1000 caracteres (~250 tokens) con solapamiento de 150 (15 %).
+# Valores elegidos con comparar_chunking.py (se probaron 500, 1000 y 1500):
+#   - 1500 caracteres (~240 tokens de media; casi todos por debajo del limite
+#     de 512 tokens de E5) con solapamiento de 225 (15 %).
 #   - Corte recursivo: primero por parrafo, luego por linea, frase y palabra.
 #   - Las fichas de pelicula NO se trocean (un fragmento por pelicula).
 #   - Las opiniones de SensaCine se separan por espectador ANTES de trocear.
@@ -61,6 +62,11 @@ LOTE_CHROMA = 500          # fragmentos por lote al insertar en Chroma
 CHUNK_SIZE = 1500
 CHUNK_OVERLAP = 225
 SEPARADORES = ["\n\n", "\n", ". ", " ", ""]
+
+# Al cortar por un separador, este se queda al FINAL del fragmento anterior
+# (asi el punto de ". " cierra su frase y el fragmento siguiente no empieza
+# por ". "). Valores posibles: "end", "start" o False.
+MANTENER_SEPARADOR = "end"
 
 # Antepone a cada fragmento una linea de contexto ("[Critica sobre ... ]") para
 # que el embedding sepa de que pelicula/fuente habla aunque el trozo no la nombre.
@@ -79,9 +85,18 @@ MIN_CARACTERES_OPINION = 40
 TIPO_POR_FUENTE = {
     "sensacine": "opinion_espectadores",
     "uacm": "academico",
+    "docta": "academico",              # TFG del repositorio Docta (UCM)
     "vanguardia": "divulgacion",
     "revista central": "divulgacion",
+    "the conversation": "divulgacion",
+    "youtube": "divulgacion",          # transcripcion de video divulgativo
 }
+
+# Los textos academicos y divulgativos tratan del miedo a la tecnologia por
+# definicion, pero no estan ligados a una pelicula (no tienen imdb_id) y por
+# eso no heredan "relevante_ia" de ninguna ficha. Se marcan aqui como
+# relevantes para que el filtro --solo-ia no los deje fuera.
+TIPOS_RELEVANTES_IA = {"academico", "divulgacion"}
 
 # --------------------------------------------------------------------------- #
 # Preguntas de prueba de recuperacion
@@ -112,7 +127,7 @@ PREGUNTAS_PRUEBA = [
     {"pregunta": "¿Qué nota tiene Ex Machina en IMDb y cuántos votos?",
      "palabras_clave": ["Ex Machina", "Nota IMDb"]},
     {"pregunta": "¿Qué películas de ciencia ficción tratan sobre inteligencia artificial?",
-     "palabras_clave": ["artificial intelligence"]},
+     "palabras_clave": ["inteligencia artificial"]},
     {"pregunta": "¿Qué dice la tesis sobre la cibernética en 2001?",
      "palabras_clave": ["cibern*"]},
 ]

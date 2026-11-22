@@ -171,6 +171,8 @@ def cargar_criticas(info: dict[str, dict]) -> list[Document]:
         if imdb_id and imdb_id in info:
             base["anio"] = info[imdb_id]["anio"]
             base["relevante_ia"] = info[imdb_id]["relevante_ia"]
+        if tipo in cfg.TIPOS_RELEVANTES_IA:
+            base["relevante_ia"] = True
 
         # Las opiniones de espectadores vienen juntas, separadas por '---':
         # cada espectador es un documento propio para no mezclar opiniones.
@@ -310,9 +312,14 @@ def cargar_todo() -> list[Document]:
 # Chunking
 # --------------------------------------------------------------------------- #
 
+def _sin_prefijo_critica(titulo: str) -> str:
+    """Quita un 'Critica:' inicial del titulo (evita 'Critica: Critica: X')."""
+    return re.sub(r"^\s*cr[ií]tica\s*:\s*", "", titulo, flags=re.IGNORECASE)
+
+
 def _contexto(meta: dict) -> str:
     """Linea de contexto que se antepone a cada fragmento."""
-    titulo = meta.get("titulo", "")
+    titulo = _sin_prefijo_critica(meta.get("titulo", ""))
     fuente = meta.get("fuente", "")
     tipo = meta.get("tipo")
     if tipo == "critica":
@@ -341,6 +348,7 @@ def trocear(docs: list[Document], chunk_size: int,
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
         separators=cfg.SEPARADORES,
+        keep_separator=cfg.MANTENER_SEPARADOR,
         length_function=len,
     )
     fragmentos: list[Document] = []
