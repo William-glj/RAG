@@ -83,6 +83,12 @@ WAYBACK_ROGEREBERT = (
     "https://www.rogerebert.com/reviews/ex-machina-2015"
 )
 
+# Copia archivada de Cinéfilos Frustrados (el sitio directo cierra la conexión).
+WAYBACK_CINEFILOS = (
+    "https://web.archive.org/web/20240713132824/"
+    "https://cinefilosfrustrados.com/critica-ex-machina-2014/"
+)
+
 
 # --------------------------------------------------------------------------- #
 # Objetivos de scraping
@@ -170,8 +176,8 @@ TARGETS = [
     ),
     (
         "Ex Machina (Cinéfilos Frustrados)",
-        "Cinéfilos Frustrados",
-        "https://cinefilosfrustrados.com/critica-ex-machina-2014/",
+        "Cinéfilos Frustrados (vía Wayback Machine)",
+        WAYBACK_CINEFILOS,
         "wordpress",
     ),
     (
@@ -478,14 +484,17 @@ def extraer_wordpress(url: str):
     titulo = h1.get_text(" ", strip=True) if h1 else "Sin título"
     cont = (s.select_one("div.entry-content")
             or s.select_one("div.post-content")
-            or s.select_one("article")
-            or s.select_one("div.td-post-content"))
+            or s.select_one("main.site-main")
+            or s.select_one("article.hentry")
+            or s.select_one("div.td-post-content")
+            or s.select_one("article"))
     if cont:
         # Quitar widgets de compartir, comentarios y navegación que se cuelan.
         for malo in cont.select(
                 "div.addtoany_share_save_container, div.sharedaddy, "
-                "div#comments, div.comment-respond, div#respond, nav, aside, "
-                "footer, div.related"):
+                "div#comments, div.comment-respond, div#respond, "
+                "div.comments-area, article.comment-body, section.comments, "
+                "nav, aside, footer, div.related"):
             malo.decompose()
     cuerpo = _texto_articulo(cont) if cont else ""
     autor = None
