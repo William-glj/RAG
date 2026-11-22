@@ -98,6 +98,7 @@ TIPO_POR_FUENTE = {
 # orientativa: que un fragmento contenga la palabra no garantiza que responda
 # bien a la pregunta.
 
+"""
 PREGUNTAS_PRUEBA = [
     {"pregunta": "¿Cómo se representa a HAL 9000 en 2001: Una odisea del espacio?",
      "palabras_clave": ["HAL"]},
@@ -115,4 +116,22 @@ PREGUNTAS_PRUEBA = [
      "palabras_clave": ["artificial intelligence"]},
     {"pregunta": "¿Qué dice la tesis sobre la cibernética en 2001?",
      "palabras_clave": ["cibern*"]},
+]
+"""
+#Más especificas
+PREGUNTAS_PRUEBA = [
+    {"pregunta": "¿Los humanos somos reemplazables?",
+     "palabras_clave": ["replicantes"]},
+    {"pregunta": "¿Qué opinan los usuarios de TMDB sobre Ex Machina?",
+     "palabras_clave": ["Ex Machina"]},
+    {"pregunta": "¿La revolución fue un avance, la digitalización una mejora pero la IA es necesaria? Todos los descubrimientos mejoran o empeoran las condiciones",
+     "palabras_clave": ["tecnología"]},
+    {"pregunta": "GEMINI, CLAUDE CODE, OpenAI ¿Qué similitudes comparten con el chip STEM? ¿Darle el control de nuestros ordenadores es igual a entregar nuestro cuerpo?",
+     "palabras_clave": ["STEM"]},
+    {"pregunta": "¿Está bien no detenerse cuando ha sido suficiente, hasta dónde pueden llegar los avances tecnológicos?",
+     "palabras_clave": ["moral"]},
+    {"pregunta": "Humano vs máquina. Creador vs Creación ¿Quién es la herramienta entre los dos a día de hoy? Los humanos que dependemos de la tecnología o la tecnología que necesita a una persona",
+     "palabras_clave": ["herramienta"]},
+    {"pregunta": "Cuando existe una herramienta mejor que nosotros, ¿qué nos queda si dependemos de ella?",
+     "palabras_clave": ["herramienta"]},
 ]

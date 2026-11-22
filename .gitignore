@@ -40,6 +40,9 @@ dist/
 #   python scraping_criticas.py
 #   python limpiar_datos.py
 datosDescargados/
+experimentos_chunking/
+indice_chroma/
+resultados_llm/
 
 # ============================================================
 #  Artefactos de Quarto (generados)
@@ -55,7 +58,7 @@ presentacion_files/
 Tareas.md
 puntoA.md
 enlacesHTML.txt
-
+ultimos_cambios.md
 # ============================================================
 #  Sistema operativo / editores
 # ============================================================
