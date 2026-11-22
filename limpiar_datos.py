@@ -101,6 +101,8 @@ CRITICA_A_IMDB = {
     # Ex Machina (Roger Ebert).
     "ex machina": "tt0470752",
     "rogerebert": "tt0470752",
+    # Her (El Antepenúltimo Mohicano y UOC open access).
+    "her": "tt1798709",
     # Upgrade (El Cuervo Enteradillo).
     "upgrade": "tt6499752",
     "cuervo": "tt6499752",

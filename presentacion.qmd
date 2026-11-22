@@ -68,6 +68,18 @@ El corpus cumple **dos requisitos** del enunciado:
 Esta tabla es la **mejor evidencia** de "corpus enriquecido y específico": 5 tipos de fuente distintos (crítica, prensa, academia, público y vídeo) y, a la vez, todo gira sobre el miedo a la tecnología/IA. Relacionar cada fila con `TARGETS` de `scraping_criticas.py`.
 :::
 
+### Segunda tanda de documentos (ampliación)
+
+Además de los 11 iniciales, se añadió una **segunda tanda de enlaces** (`enlacesHTML.txt`), incorporada a `scraping_criticas.py` y clasificada por su mecanismo de extracción:
+
+| Tipo | Fuentes añadidas | Eje temático |
+|---|---|---|
+| Scraping web | Cine y Psicología; El Antepenúltimo Mohicano (×2); El Contraplano; Cinemas Comics; Proyecto Scio UCV | *2001*, *Ex Machina*, *Her*, *Upgrade*, *Blade Runner* |
+| PDF académico | Repositorio UOC (open access) | *Her* |
+| Transcripción | 3 vídeos de YouTube | miedo a la tecnología / implantes de IA |
+
+Con esta ampliación el corpus pasa de **11 a 21 documentos** (detalle numérico en "Evolución del corpus (v1 → v2)" de la Fase A).
+
 ## De la planificación al corpus real
 
 Las listas de "qué recopilar" se convirtieron en el corpus real. La planificación cubría **dos ramas**:
@@ -216,6 +228,22 @@ El **segundo filtro de especificidad**: de todas las películas de ciencia ficci
 
 ::: {.callout-note title="💡 Cómo usarlos en la defensa"}
 Estos números salen de `datosDescargados/limpio/resumen_limpieza.txt` y demuestran el **filtro de precisión** del pipeline: no se acumula volumen, se conserva solo lo que tiene texto y está en el tema. Es la base de la "robustez de la automatización en la ingesta".
+:::
+
+### Evolución del corpus (v1 → v2)
+
+Tras la primera versión (11 documentos), se añadió una **segunda tanda de enlaces** desde `enlacesHTML.txt`: +7 críticas web, +1 PDF académico y +3 vídeos de YouTube. Comparativa de volumen:
+
+| Dato | Corpus v1 | Corpus v2 |
+|---|---|---|
+| Documentos de texto (críticas / PDF / vídeo) | 11 | **21** |
+| Películas con reseña | 59 | **59** |
+| Reseñas de TMDB | 458 | **460** |
+| Caracteres de críticas | 364 750 | **625 576** |
+| **Total de texto recuperable** | **~969 000** | **~1 230 929** |
+
+::: {.callout-note title="💡 Lectura del cambio"}
+La segunda tanda **duplica los documentos** (11 → 21) y suma **~260 000 caracteres** de crítica/análisis. Las reseñas de TMDB y las 59 películas apenas cambian porque dependen de la API de TMDB, no de los enlaces nuevos.
 :::
 
 ### Automatización obligatoria

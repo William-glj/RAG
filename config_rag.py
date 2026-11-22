@@ -79,6 +79,7 @@ MIN_CARACTERES_OPINION = 40
 TIPO_POR_FUENTE = {
     "sensacine": "opinion_espectadores",
     "uacm": "academico",
+    "uoc": "academico",
     "vanguardia": "divulgacion",
     "revista central": "divulgacion",
 }
