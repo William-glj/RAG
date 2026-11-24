@@ -1,6 +1,6 @@
 ---
 title: "Trabajo 2: Diseño, Implementación y Evaluación de un Sistema RAG"
-subtitle: "El cine de ciencia ficción y los miedos a la innovación y los avances tecnológicos. Presentación: 27  de noviembre"
+subtitle: "El cine"
 author: "Jose Ramon, Guillermo, Dylan, Tomas"
 format:
   html:
@@ -14,12 +14,7 @@ format:
 
 # Resumen del proyecto {.unnumbered}
 
-Este proyecto construye y despliega un sistema RAG especializado en **cine de ciencia ficción**, centrado en cómo el cine representa los **miedos sociales ante la innovación y los avances tecnológicos**, con la **inteligencia artificial** como foco. A partir de un corpus enriquecido de **11 textos** (crítica, prensa, academia y vídeo) y **458 reseñas + metadatos** de IMDb/TMDB, se automatiza por completo la ingesta y se demuestra empíricamente que el sistema con RAG **reduce alucinaciones** y **aporta información especializada** frente a un LLM sin contexto.
-
-Siguiendo el hilo conductor de la temática del primer trabajo (**cine**), el objetivo de esta segunda práctica es construir y desplegar un sistema RAG completo que demuestre empíricamente su superioridad frente a un LLM base sin contexto externo:
-
-- **Mitigar alucinaciones**, anclando las respuestas exclusivamente en fuentes documentales verificables.
-- **Aportar información especializada y actualizada** sobre nuestro dominio que no está presente (o es imprecisa) en los pesos preentrenados del modelo base.
+Siguiendo con la temática anterior, el objetivo de este proyecto es construir y desplegar un sistema RAG completo especializado en dicho dominio. A partir de una base de conocimiento propia, el sistema busca demostrar de forma empírica su superioridad frente a un modelo de lenguaje (LLM) base sin contexto externo, logrando mitigar las alucinaciones y aportar información especializada, precisa y fundamentada sobre el género y sus temáticas.
 
 # Introducción y Objetivos
 
@@ -29,107 +24,71 @@ Siguiendo el hilo conductor de la temática del primer trabajo (**cine**), el ob
 - **Subtema:** *El cine de ciencia ficción y los miedos a la innovación y los avances tecnológicos*
 - **Foco concreto:** la **inteligencia artificial** como manifestación actual de ese miedo.
 
-**Objetivo del corpus:**
-Recopilar textos que permitan estudiar **cómo el cine de ciencia ficción representa los temores sociales ante la innovación y los avances tecnológicos**, y **cómo han cambiado esos miedos a lo largo del tiempo**.
+Este proyecto construye y despliega un sistema RAG especializado en **cine de ciencia ficción**, centrado en cómo el cine representa los **miedos sociales ante la innovación y los avances tecnológicos**, con la **inteligencia artificial** como foco. A partir de un **corpus enriquecido**, para demostrar mediante que el sistema con RAG **reduce alucinaciones** y **aporta información especializada** frente a un LLM sin contexto.
+
+### Mitigar alucinaciones
+
+Mecanismo de control que fuerza al LLM a responder basándose únicamente en evidencia recuperada.
+
+Mecanismo: Anclaje estricto (grounding) de cada respuesta en fragmentos documentales verificables recuperados antes de generar texto
+
+### Aportar información especializada y actualizada
+
+Inyección dinámica de conocimiento específico de dominio y análisis recientes no presentes en el preentrenamiento.
+
+Cubre lagunas que no existen (o están desactualizadas) en los pesos preentrenados del modelo base.
 
 ## ¿Qué información recopilamos y por qué?
 
-
-
-
-
-
-
-
-El corpus cumple **dos requisitos** del enunciado:
+Un corpus debe cumplir **dos requisitos**:
 
 - **Enriquecido** → variedad de fuentes (prensa, crítica, ámbito académico, público), de tipos de texto y de perspectivas (alarmistas, éticas, críticas). Así los textos **no dicen todos lo mismo**.
+
 - **Específico** → todos los textos giran en torno al **miedo a la innovación y a los avances tecnológicos**, sin dispersarse en otros tópicos de la ciencia ficción.
 
-**Resultado:** 11 documentos + datos estructurados (metadatos, sinopsis y 458 reseñas) de IMDb/TMDB.
 
-## Los 11 documentos del corpus (texto)
-
-| # | Documento | Tipo de fuente | Eje temático |
-|---|---|---|---|
-| 1 | *2001: Una odisea del espacio* — crítica (Espinof) | Crítica cinematográfica | IA (HAL 9000) |
-| 2 | *2001* — opiniones de espectadores (SensaCine) | Opinión del público | IA |
-| 3 | *2001* — tesis (Repositorio UACM, PDF) | Investigación académica | Cibernética / máquina |
-| 4 | *El miedo a la tecnología, de la escritura al 5G* (La Vanguardia) | Periodismo divulgativo | Miedos históricos a la tecnología |
-| 5 | *Ex Machina* — crítica (Roger Ebert) | Crítica | IA / relación humano-máquina |
-| 6 | *Upgrade* — crítica (El Cuervo Enteradillo) | Crítica (blog) | IA / cuerpo aumentado |
-| 7 | *IA y cine: dilemas éticos* (TFG UCM, PDF) | Investigación académica | Ética: *Metrópolis*, *2001*, *Blade Runner* |
-| 8 | *El futuro de la robótica en las distopías* (The Conversation) | Prensa académica | Robótica y distopías |
-| 9 | *Blade Runner* — análisis (CinemaNet) | Análisis filosófico | Replicantes / miedo a la muerte |
-| 10 | *Blade Runner 2049* — análisis (CinemaNet) | Análisis filosófico | Transhumanismo / posthumanismo |
-| 11 | *¿Por qué le tenemos miedo a la tecnología?* (YouTube, transcrito) | Vídeo divulgativo | Miedo a la tecnología |
-
-::: {.callout-important title="🎯 Explicar en la defensa"}
-Esta tabla es la **mejor evidencia** de "corpus enriquecido y específico": 5 tipos de fuente distintos (crítica, prensa, academia, público y vídeo) y, a la vez, todo gira sobre el miedo a la tecnología/IA. Relacionar cada fila con `TARGETS` de `scraping_criticas.py`.
-:::
-
-### Segunda tanda de documentos (ampliación)
-
-Además de los 11 iniciales, se añadió una **segunda tanda de enlaces** (`enlacesHTML.txt`), incorporada a `scraping_criticas.py` y clasificada por su mecanismo de extracción:
-
-| Tipo | Fuentes añadidas | Eje temático |
-|---|---|---|
-| Scraping web | Cine y Psicología; El Antepenúltimo Mohicano (×2); El Contraplano; Cinemas Comics; Proyecto Scio UCV | *2001*, *Ex Machina*, *Her*, *Upgrade*, *Blade Runner* |
-| PDF académico | Repositorio UOC (open access) | *Her* |
-| Transcripción | 3 vídeos de YouTube | miedo a la tecnología / implantes de IA |
-
-Con esta ampliación el corpus pasa de **11 a 22 documentos** (detalle numérico en "Evolución del corpus (v1 → v2)" de la Fase A).
-
-## De la planificación al corpus real
+## Planificación al corpus real
 
 Las listas de "qué recopilar" se convirtieron en el corpus real. La planificación cubría **dos ramas**:
 
 1. **IA** (autómatas de *Metrópolis*, HAL 9000, *Blade Runner*, *Ex Machina*, *Her*, *Terminator*…)
 2. **Miedos y evolución** (deshumanización industrial, complejo de Frankenstein, biotecnología, vigilancia…)
 
-Los 11 documentos finales **combinan ambas ramas**: IA como foco + contexto histórico y filosófico de los miedos tecnológicos (La Vanguardia, The Conversation, CinemaNet).
-
-::: {.callout-note title="💡 Conexión con los datos estructurados"}
-Además de los 11 textos, se capturan **metadatos, sinopsis y 458 reseñas de IMDb/TMDB** para enriquecer el corpus y permitir filtrar por película, año o género en la recuperación (filtros de metadatos → Fase E).
-:::
-
 # Fases del Proyecto
-
 ## Fase A: Captación Automatizada de Datos (Data Pipeline)
 
+| Orden | Script | Función en el pipeline |
+| :---: | :--- | :--- |
+| **1** | `cargar_datos.py` | Descargar IMDb y  API de TMDB. |
+| **2** | `scraping_criticas.py` | Extraer información. |
+| **3** | `limpiar_datos.py` | Limpieza en `./datosDescargados/limpio`. |
 
+: Scripts de automatización {.table-bordered .table-hover tbl-colwidths="[10,30,60]"}
 
+**Datos estructurados, no estructurados y semi-estructurados**
+La captación produce **tres tipos de datos** según su formato:
 
+| Tipo | Procedencia | 
+|---|---|
+| **Estructurados** | IMDb (datasets `title.basics.tsv.gz`, `title.ratings.tsv.gz`) y TMDB (API v3: metadatos y ratings) | 
+| **No estructurados** | Críticas web, PDFs académicos y transcripciones de vídeo | 
 
+- **Estructurados:** filas × columnas con esquema fijo (título, año, géneros, nota, votos…). Cada fila es una película.
+- **No estructurados:** texto libre sin esquema (crítica, artículo, tesis, transcripción), que se troceará e indexará para la recuperación.
 
+### `cargar_datos.py`: IMDb (datasets oficiales) y robustez de la ingesta
 
+`cargar_datos.py` descarga y cruza las **dos fuentes estructuradas** del corpus:
 
+- **IMDb** → datasets oficiales (`title.basics.tsv.gz` + `title.ratings.tsv.gz`): metadatos (título, año, géneros, duración) y ratings (nota media y nº de votos).
+- **TMDB** → API v3: sinopsis, keywords, nota y **reseñas de usuarios** (detalle en 2.1.2).
 
-La Fase A cubre **tres scripts automatizados** que se ejecutan en cadena:
+Ambas se enlazan por `imdb_id` en `cruceIMDBTMDB.csv`, y junto a `imdb_peliculas.csv`, `tmdb_peliculas.csv` y `tmdb_reviews.csv` forman los cuatro ficheros de salida.
 
-1. **`cargar_datos.py`** → descarga IMDb (datasets) + TMDB (API).
-2. **`scraping_criticas.py`** → extrae los 11 textos de crítica/análisis de la web.
-3. **`limpiar_datos.py`** → limpia y normaliza todo a `./datosDescargados/limpio`.
-
-::: {.callout-important title="🎯 Explicar en la defensa"}
-El punto fuerte de la Fase A es la **automatización completa**: ningún fichero se añade a mano. Mostrar el orden de ejecución (`python cargar_datos.py` → `python scraping_criticas.py` → `python limpiar_datos.py`).
-:::
-
-### Tipos de fuentes utilizadas
-
-El enunciado permite 4 tipos de fuentes. Nosotros usamos **3 de ellas**:
-
-| Tipo (enunciado) | Qué usamos | Script |
-|---|---|---|
-| Datasets estructurados | IMDb datasets oficiales (`title.basics.tsv.gz`, `title.ratings.tsv.gz`) | `cargar_datos.py` |
-| APIs públicas | TMDB API v3 (metadatos, sinopsis, keywords y **reseñas**) | `cargar_datos.py` |
-| Extracción web (scraping) | 8 webs de crítica/análisis + 1 vídeo de YouTube | `scraping_criticas.py` |
-| Documentos no estructurados (PDF) | Tesis UACM + TFG UCM (extraídos con `pypdf`) | `scraping_criticas.py` |
-
-### `cargar_datos.py`: IMDb (datasets oficiales)
+**Primer filtro de especificidad (IMDb):**
 
 ```python
-# cargar_datos.py · cargar_basics()  (líneas ~245–268)
+# cargar_datos.py · cargar_basics()
 mascara = (
     (df["titleType"] == "movie")            # solo películas
     & df["genres"].str.contains("Sci-Fi")   # género ciencia ficción
@@ -138,12 +97,20 @@ mascara = (
 df = df.loc[mascara]
 ```
 
-::: {.callout-important title="🎯 Explicar en la defensa"}
-Aquí está el **primer filtro de especificidad**: de todo IMDb (millones de títulos) nos quedamos solo con **películas de ciencia ficción**. Mencionar `descargar_archivo()` (~210–229): descarga con `stream=True` + barra de progreso `tqdm`, y **omite re-descargar** si el fichero ya existe.
-:::
+De los millones de títulos de IMDb, este filtro conserva únicamente las **películas de ciencia ficción** (16 759 filas).
 
-### `cargar_datos.py`: TMDB (API v3)
+**Robustez de la descarga (`descargar_archivo()`):**
 
+```python
+# cargar_datos.py · descargar_archivo()
+if destino.exists():                    # idempotencia: no se re-descarga
+    return destino
+with requests.get(url, stream=True) as r:
+    for bloque in r.iter_content(chunk_size=1024*1024):
+        f.write(bloque)                 # streaming + barra de progreso tqdm
+```
+
+**`cargar_datos.py`: TMDB (API v3)**
 ```python
 # cargar_datos.py · tmdb_get()  (líneas ~339–355)
 for intento in range(reintentos):
@@ -157,145 +124,129 @@ for intento in range(reintentos):
     r.raise_for_status()
 ```
 
-::: {.callout-important title="🎯 Explicar en la defensa"}
-Robustez frente al **rate-limit de TMDB**: pausa entre peticiones + reintentos con *backoff exponencial*. Destacar también:
-- `PELICULAS_CANONICAS` (~147–182): lista de películas canónicas de IA que siempre se incluyen.
-- `TERMINOS_IA` / `TMDB_TERMINOS_KEYWORD` (~114–142): resolución de términos → keywords para marcar `relevante_ia`.
-- `construir_cruce()` (~558–614): **cruce IMDb ↔ TMDB** por `imdb_id`.
-:::
+**Fuentes del enunciado que cubre `cargar_datos.py` (2 de 4):**
 
-### Por qué no hay reseñas de IMDb
+El enunciado permite **4 tipos de fuentes**; este script cubre **2 de ellas**:
 
-::: {.callout-note title="💡 Decisión técnica a mencionar"}
-IMDb **no ofrece API pública de reseñas** y su web está protegida por AWS WAF (anti-bot, devuelve HTTP 202). Por eso:
-- De **IMDb** → solo datos estructurados y ratings oficiales.
-- Las **reseñas de texto** se obtienen de **TMDB** (que sí las expone en su API).
-- Ambos se enlazan en `cruceIMDBTMDB.csv`.
-:::
+| Tipo (enunciado) | Qué usamos |
+|---|---|
+| Datasets estructurados | IMDb datasets oficiales (`title.basics.tsv.gz`, `title.ratings.tsv.gz`) |
+| APIs públicas | TMDB API v3 (metadatos, sinopsis, keywords y **reseñas**) |
 
-### `scraping_criticas.py`: los 11 textos
+### `scraping_criticas.py`: extracción web, PDFs y transcripción de vídeo
+
+`scraping_criticas.py` lee la lista de enlaces (`TARGETS`) y, de cada página, extrae **únicamente el texto** de la crítica o artículo, guardándolo en un `.txt` con cabecera de procedencia. Genera **22 documentos de texto libre**: 15 críticas web + 3 PDF académicos (vía `TARGETS`) y 4 transcripciones de YouTube (vía `VIDEOS`).
+
+Cada entrada de `TARGETS` es una tupla `(nombre, fuente, url, extractor)`:
 
 ```python
 # scraping_criticas.py · TARGETS  (cada fila = un documento del corpus)
 ("Blade Runner 2049 - la apoteosis de lo humano (CinemaNet)",
- "CinemaNet", URL_CINEMANET_2049, "cinemanet"),
+ "CinemaNet",
+ "https://www.cinemanet.info/2018/01/analisis-blade-runner-2049-...",
+ "cinemanet"),
 ```
 
-Cada fila de `TARGETS` = un documento del corpus, con su **extractor específico**:
+**Un extractor por sitio** (cada web tiene un HTML distinto):
 
 ```python
 EXTRACTORES = {
     "espinof": extraer_espinof, "sensacine": extraer_sensacine,
     "lavanguardia": extraer_lavanguardia, "rogerebert": extraer_rogerebert,
     "blogspot": extraer_blogspot, "theconversation": extraer_theconversation,
-    "cinemanet": extraer_cinemanet,
+    "cinemanet": extraer_cinemanet, "wordpress": extraer_wordpress,
 }
 ```
 
-::: {.callout-important title="🎯 Explicar en la defensa"}
-Cada web tiene una estructura distinta → **un extractor por sitio** con BeautifulSoup. Casos especiales a destacar:
-- **Roger Ebert** bloquea scraping (Cloudflare 403) → se usa la copia de **Wayback Machine** (`WAYBACK_ROGEREBERT`).
-- **Tesis UACM** → `extraer_pdf()` (~290–317) descarga en streaming y extrae texto con `pypdf`.
-- **Provenance** → `guardar()` (~174–190) escribe cabecera `Título/Fuente/URL/Autor/Fecha` para rastrear el origen de cada fragmento.
-:::
+Cada extractor localiza el contenedor del artículo con selectores CSS (`select_one`) y extrae los párrafos con BeautifulSoup. Los PDFs se procesan con `extraer_pdf()` (`pypdf`) y los vídeos con `transcribir_video()` (`yt-dlp`).
 
-### `limpiar_datos.py`: filtros y normalización
+**Robustez del scraping:**
 
 ```python
-# limpiar_datos.py · limpiar_csvs()  (filtro de especificidad)
+# scraping_criticas.py · _get()  (reintentos ante 429/5xx)
+for intento in range(reintentos):
+    r = requests.get(url, headers=HEADERS, timeout=timeout)
+    if r.status_code == 200:
+        return r
+    if r.status_code in (429, 500, 502, 503, 504) and intento < reintentos - 1:
+        time.sleep(3 * (intento + 1))   # espera creciente
+        continue
+    r.raise_for_status()
+```
+
+**Documentos que genera `scraping_criticas.py` (22 textos):**
+
+Este script cubre las otras **2 de las 4 fuentes** del enunciado —*extracción web (scraping)* y *documentos no estructurados (PDF)*—, más **4 transcripciones de vídeo**. Lista completa:
+
+| # | Documento | Tipo de fuente | Eje temático |
+|---|---|---|---|
+| 1 | *2001: Una odisea del espacio* — crítica (Espinof) | Crítica cinematográfica | IA (HAL 9000) |
+| 2 | *2001* — opiniones de espectadores (SensaCine) | Opinión del público | IA |
+| 3 | *2001* — tesis (Repositorio UACM, PDF) | Investigación académica | Cibernética / máquina |
+| 4 | *El miedo a la tecnología, de la escritura al 5G* (La Vanguardia) | Periodismo divulgativo | Miedos históricos a la tecnología |
+| 5 | *Ex Machina* — crítica (Roger Ebert) | Crítica | IA / relación humano-máquina |
+| 6 | *Upgrade* — crítica (El Cuervo Enteradillo) | Crítica (blog) | IA / cuerpo aumentado |
+| 7 | *IA y cine: dilemas éticos* (TFG UCM, PDF) | Investigación académica | Ética: *Metrópolis*, *2001*, *Blade Runner* |
+| 8 | *El futuro de la robótica en las distopías* (The Conversation) | Prensa académica | Robótica y distopías |
+| 9 | *Blade Runner* — análisis (CinemaNet) | Análisis filosófico | Replicantes / miedo a la muerte |
+| 10 | *Blade Runner 2049* — análisis (CinemaNet) | Análisis filosófico | Transhumanismo / posthumanismo |
+| 11 | *2001* — crítica (Cine y Psicología) | Crítica (blog) | IA (HAL 9000) |
+| 12 | *Ex Machina* — crítica (El Antepenúltimo Mohicano) | Crítica (blog) | IA / relación humano-máquina |
+| 13 | *Ex Machina* — crítica (Cinéfilos Frustrados) | Crítica | IA / relación humano-máquina |
+| 14 | *Her* — crítica (El Antepenúltimo Mohicano) | Crítica (blog) | IA / soledad |
+| 15 | *Her* — análisis académico (Repositorio UOC, PDF) | Investigación académica | Soledad posmoderna / IA |
+| 16 | *Upgrade* — crítica (El Contraplano) | Crítica | IA / cuerpo aumentado |
+| 17 | *Upgrade* — implantes de IA (Cinemas Comics) | Crítica | IA / implantes |
+| 18 | *Blade Runner* — análisis filosófico (Proyecto Scio UCV) | Análisis filosófico | Replicantes / filosofía |
+| 19 | *¿Por qué le tenemos miedo a la tecnología?* (YouTube, transcrito) | Vídeo divulgativo | Miedo a la tecnología |
+| 20 | *Upgrade* — vídeo sobre implantes de IA (YouTube, transcrito) | Vídeo divulgativo | IA / implantes |
+| 21 | Vídeo extra 2 — miedo a la tecnología (YouTube, transcrito) | Vídeo divulgativo | Miedo a la tecnología |
+| 22 | Vídeo extra 3 — miedo a la tecnología (YouTube, transcrito) | Vídeo divulgativo | Miedo a la tecnología |
+
+### `limpiar_datos.py`: limpieza y normalización del corpus
+
+`limpiar_datos.py` lee lo que generan los dos scripts anteriores y produce la versión limpia en `./datosDescargados/limpio`, aplicando **cinco reglas**: descarta nulos y duplicados, conserva **solo** las películas con texto recuperable, prioriza `relevante_ia` y limpia el texto de las críticas (pies de página, portadas, números de página).
+
+**Segundo filtro de especificidad** (sobre el cruce IMDb↔TMDB):
+
+```python
+# limpiar_datos.py · limpiar_csvs()
 tiene_nota = cruce["rating_imdb"].notna() | cruce["rating_tmdb"].notna()
-has_review = cruce["imdb_id"].isin(review_imdb_ids) | cruce["imdb_id"].isin(scraped_count)
+has_review = (cruce["imdb_id"].isin(review_imdb_ids)
+              | cruce["imdb_id"].isin(set(scraped_count)))
 conservar  = tiene_nota & has_review   # SOLO películas con reseña de texto
 master     = cruce.loc[conservar]
 ```
 
-::: {.callout-important title="🎯 Explicar en la defensa"}
-El **segundo filtro de especificidad**: de todas las películas de ciencia ficción nos quedamos solo con las que **aportan texto recuperable** (reseña de TMDB o crítica scrapeada). Las películas que solo aportan metadatos (título, año, nota, votos) se descartan porque no nutren al RAG. En textos scrapeados, `_BOILERPLATE` quita pies de página, suscripciones y avisos legales; en la tesis y el TFG, `_TESIS_FRONTMATTER` quita portada e índice.
+**Limpieza del texto** (críticas y PDFs):
+
+- `_BOILERPLATE`: regex que eliminan pies de página, suscripciones, "te puede interesar", avisos legales…
+- `_limpiar_cuerpo_pdf` / `_limpiar_cuerpo_pdf_ucm`: quitan portada, índice (TOC), números de página y reúnen los párrafos cortados por la extracción de `pypdf`.
+- `normalizar_espacios()` y `sin_acentos()`: colapsan espacios/saltos y permiten comparaciones robustas.
+
+::: {.callout-important title="🎯 Robustez a explicar en la defensa"}
+- **Precisión sobre volumen:** de 16 813 registros del cruce se conservan solo **59** (los que tienen reseña de texto). Las películas que solo aportan metadatos no nutren al RAG y se descartan.
+- **Reseñas de ruido:** se descartan las vacías o menores de 80 caracteres ("Awesome!") y las duplicadas.
+- **Relevancia IA:** `relevante_ia` se resuelve primero desde las keywords de TMDB y, si no, por heurística sobre título/géneros.
+- **Trazabilidad:** se genera `criticas_manifest.csv` (metadatos de cada crítica) y `resumen_limpieza.txt` (antes/después).
 :::
 
-### Resultados del pipeline (números reales)
+## Resultados del pipeline (números reales)
 
 | Dato | Antes | Después |
 |---|---|---|
-| IMDb películas (Sci-Fi) | 16 759 | **59** con reseña |
+| IMDb películas (Sci-Fi) | 16 759 | **46** con reseña |
 | TMDB películas | 177 | **59** |
-| TMDB reseñas | 482 | **458** (586 772 caracteres) |
+| TMDB reseñas | 484 | **460** |
 | Cruce IMDb↔TMDB | 16 813 | **59** |
-| Críticas/análisis scrapeados | 14 | **11** (364 750 caracteres) |
+| Críticas/análisis scrapeados | 22 | **22** (688 339 caracteres) |
 
 - **59 películas** con reseña de texto, **todas relevantes a IA/tecnología**.
-- **~969 000 caracteres** de texto recuperable total (reseñas + críticas + sinopsis).
+- **~1 293 692 caracteres** de texto recuperable total (reseñas + críticas + sinopsis).
 
 ::: {.callout-note title="💡 Cómo usarlos en la defensa"}
 Estos números salen de `datosDescargados/limpio/resumen_limpieza.txt` y demuestran el **filtro de precisión** del pipeline: no se acumula volumen, se conserva solo lo que tiene texto y está en el tema. Es la base de la "robustez de la automatización en la ingesta".
 :::
-
-### Evolución del corpus (v1 → v2)
-
-Tras la primera versión (11 documentos), se añadió una **segunda tanda de enlaces** desde `enlacesHTML.txt`: +7 críticas web, +1 PDF académico y +3 vídeos de YouTube. Comparativa de volumen:
-
-| Dato | Corpus v1 | Corpus v2 |
-|---|---|---|
-| Documentos de texto (críticas / PDF / vídeo) | 11 | **22** |
-| Películas con reseña | 59 | **59** |
-| Reseñas de TMDB | 458 | **460** |
-| Caracteres de críticas | 364 750 | **688 339** |
-| **Total de texto recuperable** | **~969 000** | **~1 293 692** |
-
-::: {.callout-note title="💡 Lectura del cambio"}
-La segunda tanda **duplica los documentos** (11 → 22) y suma **~324 000 caracteres** de crítica/análisis. Las reseñas de TMDB y las 59 películas apenas cambian porque dependen de la API de TMDB, no de los enlaces nuevos.
-:::
-
-### Automatización obligatoria
-
-- **Sin carga manual de ficheros:** todo se descarga, scrapea y limpia por script.
-- **Clave de TMDB** gestionada con `.env` (`python-dotenv`); sin clave, el script sigue funcionando solo con IMDb y avisa.
-- **Idempotencia:** los ficheros ya descargados se omiten (`descargar_archivo` comprueba si existe).
-
-```bash
-python cargar_datos.py      # 1) IMDb + TMDB + cruce
-python scraping_criticas.py # 2) 11 textos de crítica/análisis
-python limpiar_datos.py     # 3) limpieza → ./datosDescargados/limpio
-```
-
-::: {.callout-important title="🎯 Explicar en la defensa"}
-Enseñar este orden de ejecución y recalcar que **se puede repetir de cero** sin intervención manual: es lo que pide el criterio "robustez de la automatización en la ingesta".
-:::
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
