@@ -1,6 +1,6 @@
 ---
 title: "Trabajo 2: Diseño, Implementación y Evaluación de un Sistema RAG"
-subtitle: "El cine"
+subtitle: "El cine de ciencia ficción y el miedo a la tecnología"
 author: "Jose Ramon, Guillermo, Dylan, Tomas"
 format:
   html:
@@ -256,61 +256,212 @@ Estos números salen de `datosDescargados/limpio/resumen_limpieza.txt` y demuest
 
 ## Fase B: Arquitectura RAG y Estrategia de Chunking
 
-**→ Pendiente**
+### Librería de orquestación: LangChain
 
-- [ ] **Librería de orquestación:** LangChain / LlamaIndex / Haystack → elegir y justificar.
-- [ ] **Base de datos vectorial:** ChromaDB / FAISS / Qdrant / Milvus / Pinecone → elegir y justificar.
-- [ ] **Estrategia de chunking:** fixed-size con solapamiento / semántico / Markdown-recursive → justificar cómo el tamaño del chunk afecta al contexto y la recuperación.
-- [ ] Extractos de código comentados (chunking + embeddings + indexado).
+Elegimos **LangChain** porque proporciona exactamente las piezas que un RAG necesita, y encajan entre sí:
+
+- El tipo **`Document`** (`page_content` + `metadata`) para representar cada texto con su procedencia.
+- El splitter **`RecursiveCharacterTextSplitter`** para el troceado.
+- La integración **`langchain-chroma`** con la base vectorial.
+- La interfaz común **`Embeddings`**, sobre la que construimos `EmbeddingsE5`.
+
+Así, todo el pipeline de la Fase B se reduce a una cadena legible y repetible: `Document → trocear → embed → indexar`.
+
+### Base de datos vectorial: ChromaDB
+
+Elegimos **ChromaDB** por cuatro motivos:
+
+1. **Persistencia en disco** (`persist_directory`): no hace falta levantar un servidor; el índice vive en `indice_chroma/`.
+2. **Filtros de metadatos nativos** (`filter`): los usamos para filtrar por tipo de documento y por relevancia a IA.
+3. **Integración con LangChain** (`langchain-chroma`).
+4. **Código abierto y ligero**: el corpus (~1.400 fragmentos) cabe holgadamente.
+
+### Modelo de embeddings: `intfloat/multilingual-e5-small`
+
+El corpus mezcla **español** (críticas, tesis, artículos) e **inglés** (reseñas de TMDB, Roger Ebert), por lo que el modelo debe ser **multilingüe**. Elegimos `multilingual-e5-small` (384 dimensiones) y **descartamos** `paraphrase-multilingual-MiniLM-L12-v2` porque trunca cada texto a 128 tokens (~500 caracteres): con fragmentos de 1.500 caracteres, la mitad del fragmento quedaría fuera del embedding.
+
+Los modelos **E5** exigen un prefijo que distingue los dos usos: `"passage: "` al indexar y `"query: "` al consultar. Nuestra clase `EmbeddingsE5` los añade automáticamente:
+
+```python
+# rag_comun.py · EmbeddingsE5
+def embed_documents(self, texts):
+    textos = [self.prefijo_documento + t for t in texts]   # "passage: "
+    return self.modelo.encode(textos, normalize_embeddings=True)
+
+def embed_query(self, text):
+    return self.modelo.encode(self.prefijo_consulta + text,  # "query: "
+                              normalize_embeddings=True)
+```
+
+### Estrategia de chunking
+
+Usamos **`RecursiveCharacterTextSplitter`** (chunking recursivo) con estos parámetros:
+
+- **`chunk_size = 1500`** caracteres (~240 tokens de media, por debajo del límite de 512 tokens de E5).
+- **`chunk_overlap = 225`** (15 %), para no cortar una idea a mitad.
+- **Separadores** `["\n\n", "\n", ". ", " ", ""]`: corta primero por párrafo, luego por línea, luego por frase y por palabra. Respeta la estructura semántica (nunca parte una palabra).
+
+Reglas específicas:
+
+- Las **fichas de película no se trocean** (una ficha ya es la unidad mínima con sentido).
+- Las **opiniones de espectadores se separan por autor antes de trocear** (cada espectador es un documento, para no mezclar opiniones).
+- Se antepone a cada fragmento una **línea de contexto** (`[Crítica: … — fuente]`, `[Reseña de usuario de TMDB sobre …]`…) para que el embedding sepa de qué película/fuente habla aunque el trozo no la nombre.
+
+```python
+# construir_indice.py · trocear()
+splitter = RecursiveCharacterTextSplitter(
+    chunk_size=chunk_size, chunk_overlap=chunk_overlap,
+    separators=["\n\n", "\n", ". ", " ", ""], keep_separator="end",
+    length_function=len,
+)
+```
+
+### ¿Cómo afecta el tamaño del chunk a la recuperación?
+
+- **Chunks pequeños** → búsqueda más precisa, pero menos contexto: una idea puede quedar repartida en varios fragmentos.
+- **Chunks grandes** → más contexto por fragmento, pero diluyen la señal semántica (el embedding mezcla varias ideas) y pueden superar el límite de tokens del modelo.
+
+Lo **validamos empíricamente** con `comparar_chunking.py`, que reconstruye el índice con tres tamaños y lanza las mismas preguntas de prueba midiendo `acierto@5` y **MRR** (la posición media del primer acierto):
+
+| Tamaño | Solape | Fragmentos | Long. media | acierto@5 | MRR |
+|---|---|---|---|---|---|
+| 500 | 75 | 3.733 | 437 | **0.929** | 0.768 |
+| 1.000 | 150 | 1.919 | 789 | 0.714 | 0.679 |
+| **1.500** | **225** | **1.387** | **1.068** | 0.857 | **0.774** |
+
+**Conclusión:** el tamaño de 500 obtiene el mayor `acierto@5` (13/14), pero genera **3.733 fragmentos** (casi el triple) de solo ~437 caracteres, que pierden contexto. El tamaño de **1.500** ofrece el **mejor MRR** (0.774, encuentra antes el fragmento correcto), recupera 12/14 con fragmentos mucho más ricos (~1.068 caracteres de media) y un índice 2,7× más pequeño. Elegimos **1.500** por ese equilibrio entre tasa de acierto, contexto por fragmento y eficiencia del índice.
+
+*Nota metodológica: la métrica `acierto@5` es orientativa — comprueba que una palabra clave aparezca en el fragmento recuperado, no que la respuesta sea correcta. La calidad real de la recuperación se valida con el LLM en la Fase C.*
+
+### Indexado
+
+`construir_indice.py` borra el índice anterior y lo reconstruye desde cero (proceso **repetible**), insertando en lotes:
+
+```python
+# construir_indice.py · construir()
+_borrar_indice(indice_dir)                 # índice anterior fuera
+base = abrir_base(indice_dir, embeddings)  # Chroma con espacio coseno
+for i in range(0, len(fragmentos), cfg.LOTE_CHROMA):
+    lote = fragmentos[i:i + cfg.LOTE_CHROMA]
+    base.add_documents(lote, ids=[f.metadata["chunk_id"] for f in lote])
+```
 
 ## Fase C: Evaluación Comparativa (Sin RAG vs Con RAG)
 
-**→ Pendiente**
+### Banco de pruebas
 
-- [ ] **Banco de pruebas:** 5–10 preguntas específicas y complejas de nicho (que un LLM genérico no responde bien).
-- [ ] **Modelo sin RAG:** mostrar alucinaciones / falta de conocimiento.
-- [ ] **Modelo con RAG:** mostrar recuperación correcta + respuesta citando fragmentos.
-- [ ] Capturas / tabla comparativa (pregunta → sin RAG → con RAG).
+Definimos **14 preguntas** en `config_rag.py`: **8 factuales** (HAL 9000, nota de Ex Machina, opiniones de SensaCine, películas sobre IA…) y **6 analíticas** (¿somos reemplazables?, humano vs máquina, límites del avance tecnológico…). Son preguntas de nicho sobre **este corpus concreto**, que un LLM genérico no puede responder con precisión sin los documentos.
+
+### Sin RAG: alucinaciones y falta de conocimiento
+
+Sin contexto, el modelo responde de memoria y **se inventa los datos concretos**. El ejemplo más claro:
+
+| Pregunta | Sin RAG | Con RAG |
+|---|---|---|
+| ¿Qué nota tiene *Ex Machina* en IMDb y cuántos votos? | "7.7/10, basada en **≈615.000** votos" ❌ | "nota **7.7**, basada en **648.893** votos [1]" ✅ |
+
+- **Sin RAG** alucina el número de votos (~615.000).
+- **Con RAG** recupera la ficha exacta y cita **648.893 votos** con su fuente.
+
+Otro ejemplo: ante *"¿Qué dice la tesis sobre la cibernética en 2001?"*, sin RAG da una respuesta genérica sobre HAL; **con RAG** recupera el contenido real de la tesis UACM (la cibernética como *"desconexión del hombre con sus emociones"*, la relación de control entre tecnología y personas, etc.).
+
+### Con RAG: respuestas ancladas en los fragmentos
+
+El sistema recupera los `k` fragmentos más cercanos y obliga al modelo a responder **solo con ellos, citándolos entre corchetes** (prompt `SISTEMA` en `con_rag.py`). Además, cuando la respuesta no está en los fragmentos, el modelo lo dice explícitamente (*"No hay información suficiente en la base de datos"*) en lugar de inventar — exactamente el objetivo de mitigar alucinaciones.
+
+### Resultados
+
+Los resultados completos están en `resultados_llm/sin_rag.csv` y `resultados_llm/con_rag.csv` (14 filas cada uno, generados con `sin_rag.py` y `con_rag.py`).
+
+::: {.callout-tip title="📸 Para la defensa"}
+Añade aquí una captura de la app en modo "Comparar ambos" mostrando la misma pregunta respondida sin RAG y con RAG lado a lado, con los fragmentos citados.
+:::
 
 ## Fase D: Interfaz de Usuario y Despliegue
 
-**→ Pendiente**
+### Aplicación web (Streamlit)
 
-- [ ] **App web interactiva** en tiempo real: Streamlit o Gradio.
-- [ ] **Despliegue público:** Hugging Face Spaces / Streamlit Community Cloud / equivalente.
-- [ ] Enlace directo a la app + captura de la interfaz.
+`app.py` ofrece una interfaz en tiempo real con:
+
+- **Selector de proveedor** (configurado por `LLM_*` u OpenRouter).
+- **Tres modos:** *Con RAG*, *Sin RAG* y *Comparar ambos* (respuestas lado a lado).
+- **Parámetros:** número de fragmentos `k`, filtro por tipo de documento y filtro "solo películas relevantes a IA".
+- **Trazabilidad:** cada respuesta con RAG muestra los fragmentos usados, con fuente y distancia.
+
+Los recursos pesados (modelo de embeddings e índice) se cargan una sola vez con `@st.cache_resource`.
+
+### Despliegue público
+
+La app está desplegada en **Streamlit Community Cloud**, que lee el repositorio de GitHub e instala `requirements.txt`. Las claves se inyectan como **secretos** (`st.secrets`, formato TOML) y `cargar_secretos()` las copia al entorno para que `llm_comun.py` las lea igual que desde el `.env` local.
+
+::: {.callout-important title="🔑 Nota sobre Hugging Face Spaces"}
+Inicialmente se consideró HF Spaces, pero desde 2025 los Spaces con SDK Docker/Gradio requieren plan de pago para cuentas nuevas. Por eso el despliegue final es en Streamlit Community Cloud (gratis).
+:::
+
+📸 *Añade aquí una captura de la interfaz desplegada.*
 
 ## Fase E: Técnicas Avanzadas de RAG (Opcional)
 
-**→ Pendiente**
+### Implementado: filtros de metadatos
 
-- [ ] **Reranking:** Cohere Rerank / FlashRank.
-- [ ] **Filtros de metadatos:** por categoría, fecha o etiqueta antes de la recuperación.
-- [ ] **RAG adaptativo / híbrido:** decidir si buscar o no, o combinar BM25 + vectorial (hybrid search).
-- [ ] Justificar cuáles se implementan y por qué (puntuación extra).
+Antes de la búsqueda vectorial se puede filtrar por **tipo de documento** (`critica`, `resena`, `academico`, `divulgacion`, `ficha`, `opinion_espectadores`) y por **relevancia a IA** (`relevante_ia`), mediante el filtro de metadatos de Chroma:
+
+```python
+# rag_comun.py · construir_filtro()
+def construir_filtro(tipo=None, solo_relevantes_ia=False):
+    condiciones = []
+    if tipo:
+        condiciones.append({"tipo": tipo})
+    if solo_relevantes_ia:
+        condiciones.append({"relevante_ia": True})
+    if len(condiciones) == 1:
+        return condiciones[0]
+    return {"$and": condiciones}
+```
+
+Esto permite preguntas como *"miedo a la IA"* restringidas a `resena` o solo a películas marcadas como relevantes, refinando la recuperación antes de llamar al LLM.
+
+### No implementado (posible trabajo futuro)
+
+- **Reranking** (p. ej. FlashRank): reordenar los fragmentos recuperados con un modelo de relevancia antes de dárselos al LLM.
+- **Hybrid search (BM25 + vectorial)**: combinar búsqueda léxica y semántica para términos exactos (p. ej. nombres propios, notas).
+
+Ambos se documentan como posibles extensiones; el **filtro de metadatos** ya cubre la puntuación extra de la Fase E.
 
 # Documentación y Entrega (Quarto y GitHub)
 
-**→ Pendiente**
+### Estructura del repositorio
 
-- [ ] **Estructura del repositorio** (carpeta `/rag_project`): scripts, config, interfaz, `requirements.txt`.
-- [ ] **Web Quarto** con: motivación y procedencia, pipeline, chunking, evaluación comparativa, enlaces, extractos de código.
-- [ ] **Publicación online:** GitHub Pages / Quarto Pub → compartir URL en Loop.
+El código está en el repositorio de GitHub con esta organización:
+
+| Script | Fase |
+|---|---|
+| `cargar_datos.py`, `scraping_criticas.py`, `limpiar_datos.py` | A. Captación y limpieza |
+| `construir_indice.py`, `comparar_chunking.py`, `probar_recuperacion.py`, `rag_comun.py`, `config_rag.py` | B. RAG y chunking |
+| `sin_rag.py`, `con_rag.py`, `llm_comun.py` | C. Evaluación |
+| `app.py` | D. Interfaz y despliegue |
+| `requirements.txt` | Dependencias |
+
+### Web Quarto
+
+Esta misma memoria (generada con Quarto) cubre: motivación y procedencia de los datos, pipeline de automatización, estrategia de chunking, evaluación comparativa, enlaces y extractos de código.
+
+### Publicación online
+
+La memoria se publica en línea (GitHub Pages o Quarto Pub) y su URL se comparte en Loop.
 
 # Exposición y Criterios de Evaluación
 
-**→ Pendiente**
-
-- [ ] **Fecha:** 27 de noviembre.
-- [ ] **Reparto de roles** (uno por miembro):
-  - Captación y pipeline de datos →
-  - Vector DB, chunking y librerías →
-  - Interfaz y despliegue →
-  - Evaluación comparativa y técnicas avanzadas →
-- [ ] **Criterios a cubrir:** automatización robusta, fundamentación técnica, claridad de la comparativa, calidad de la interfaz, documentación y dominio individual.
+- **Fecha:** 27 de noviembre.
+- **Reparto de roles** (uno por miembro):
+  - Captación y pipeline de datos → *(nombre)*
+  - Vector DB, chunking y librerías → *(nombre)*
+  - Interfaz y despliegue → *(nombre)*
+  - Evaluación comparativa y técnicas avanzadas → *(nombre)*
+- **Criterios a cubrir:** automatización robusta, fundamentación técnica, claridad de la comparativa, calidad de la interfaz, documentación y dominio individual.
 
 # Enlaces {.unnumbered}
 
-- Repositorio GitHub → **→ Pendiente**
-- Web Quarto → **→ Pendiente**
-- App desplegada → **→ Pendiente**
+- **Repositorio GitHub** → https://github.com/William-glj/RAG
+- **App desplegada (Streamlit)** → *(pega aquí la URL de share.streamlit.io)*
+- **Web Quarto** → *(pega aquí la URL publicada)*

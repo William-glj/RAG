@@ -23,7 +23,8 @@ from pathlib import Path
 
 import pandas as pd
 from dotenv import load_dotenv
-from openai import OpenAI, RateLimitError
+from openai import (OpenAI, APIConnectionError, APITimeoutError,
+                    InternalServerError, RateLimitError)
 
 import config_rag as cfg
 
@@ -50,12 +51,12 @@ CARPETA_RESULTADOS = cfg.RAIZ / "resultados_llm"
 MAX_TOKENS = 6000
 
 MENSAJE_SATURADO = (
-    "El proveedor del modelo está saturado en este momento (error HTTP 429: "
-    "demasiadas peticiones). Inténtalo de nuevo en unos minutos."
+    "El proveedor del modelo no está disponible en este momento (error "
+    "transitorio 429/5xx). Inténtalo de nuevo en unos minutos."
 )
 
 TIMEOUT_PETICION = 120   # segundos máximos por petición
-REINTENTOS_429 = 2     # reintentos antes de rendirse
+REINTENTOS_429 = 3     # reintentos ante errores transitorios (429/5xx) antes de rendirse
 ESPERA_429 = 5         # segundos de espera inicial; se duplica en cada reintento
 
 
@@ -84,8 +85,9 @@ def crear_cliente(proveedor: str = "llm") -> tuple[OpenAI, str]:
 
 
 def preguntar(cliente: OpenAI, modelo: str, sistema: str, usuario: str) -> str:
-    """Envía una petición al modelo. Ante un 429 reintenta y, si sigue
-    saturado, devuelve MENSAJE_SATURADO."""
+    """Envía una petición al modelo. Ante errores transitorios (429, 5xx o de
+    conexión) reintenta con espera creciente y, si el proveedor sigue caído,
+    devuelve MENSAJE_SATURADO."""
     for intento in range(REINTENTOS_429 + 1):
         try:
             respuesta = cliente.chat.completions.create(
@@ -96,10 +98,12 @@ def preguntar(cliente: OpenAI, modelo: str, sistema: str, usuario: str) -> str:
                 max_tokens=MAX_TOKENS,
             )
             return (respuesta.choices[0].message.content or "").strip()
-        except RateLimitError:
+        except (RateLimitError, InternalServerError,
+                APIConnectionError, APITimeoutError) as exc:
             if intento < REINTENTOS_429:
                 espera = ESPERA_429 * 2 ** intento
-                print(f"  [429] proveedor saturado; reintento en {espera} s ...")
+                print(f"  [{getattr(exc, 'status_code', type(exc).__name__)}] "
+                      f"error transitorio; reintento en {espera} s ...")
                 time.sleep(espera)
     return MENSAJE_SATURADO
 

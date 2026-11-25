@@ -30,8 +30,8 @@ El proyecto se organiza en fases, que corresponden a las del enunciado:
 
 ### Corpus
 
-- **11 documentos de texto:** críticas (Espinof, Roger Ebert, El Cuervo Enteradillo), análisis (CinemaNet, The Conversation), un artículo de La Vanguardia, dos tesis en PDF (UACM y UCM) y la transcripción de un vídeo de YouTube.
-- **Datos estructurados:** unas 59 películas de ciencia ficción con metadatos de IMDb y TMDB, y unas 458 reseñas de usuarios de TMDB.
+- **22 documentos de texto:** críticas y análisis de cine (Espinof, SensaCine, Roger Ebert, El Cuervo Enteradillo, CinemaNet, The Conversation, Cine y Psicología, El Antepenúltimo Mohicano, El Contraplano, Cinemas Comics, Proyecto Scio UCV…), un artículo de prensa (La Vanguardia), tres textos académicos en PDF (UACM, UCM y UOC) y cuatro transcripciones de vídeos de YouTube.
+- **Datos estructurados:** unas 59 películas de ciencia ficción con metadatos de IMDb y TMDB, y unas 460 reseñas de usuarios de TMDB.
 
 El corpus se genera automáticamente desde las fuentes; no se añade ningún fichero a mano.
 
@@ -70,7 +70,7 @@ IMDb / TMDB / webs / PDFs / YouTube
 ├── comparar_chunking.py     # Fase B: experimento de tamaños de fragmento
 ├── rag_comun.py             # Fase B: embeddings E5, ChromaDB y filtros
 ├── config_rag.py            # Parámetros compartidos (chunking, modelos, preguntas)
-├── llm_comun.py             # Cliente del LLM (proveedor, reintentos ante 429)
+├── llm_comun.py             # Cliente del LLM (proveedor, reintentos ante errores transitorios)
 ├── sin_rag.py               # Fase C: preguntas al LLM sin contexto
 ├── con_rag.py               # Fase C: preguntas al LLM con contexto recuperado
 ├── app.py                   # Fase D: interfaz web en Streamlit
@@ -205,7 +205,7 @@ uv run python con_rag.py "miedo a la IA" -k 3 --solo-ia
 uv run python con_rag.py --proveedor openrouter
 ```
 
-Las respuestas se guardan en `resultados_llm/` (`sin_rag.csv`, `con_rag.csv`, y con sufijo `_openrouter` cuando se usa OpenRouter). Ante un error 429 (demasiadas peticiones), el sistema reintenta hasta dos veces con espera creciente y, si el proveedor sigue saturado, registra un mensaje en lugar de detenerse.
+Las respuestas se guardan en `resultados_llm/` (`sin_rag.csv`, `con_rag.csv`, y con sufijo `_openrouter` cuando se usa OpenRouter). Ante errores transitorios (429, 5xx o fallos de conexión), el sistema reintenta hasta tres veces con espera creciente y, si el proveedor sigue caído, registra un mensaje en lugar de detenerse.
 
 ## Interfaz web
 
@@ -245,14 +245,16 @@ En la nube, `app.py` no ejecuta la construcción del índice. Por eso `indice_ch
 - **Dependencia de proveedores externos.** Los límites de peticiones de los proveedores (especialmente en los modelos gratuitos de OpenRouter) pueden provocar errores 429.
 - **Reseñas de IMDb no disponibles.** IMDb no ofrece API pública de reseñas y su web bloquea el acceso automatizado. Por eso las reseñas de texto proceden de TMDB.
 - **Roger Ebert mediante Wayback Machine.** La crítica se obtiene de una copia archivada, porque el sitio original bloquea el acceso automatizado.
-- **Tamaño del corpus.** Con unas 59 películas y 11 documentos, los resultados son orientativos y no generalizables.
+- **Tamaño del corpus.** Con unas 59 películas y 22 documentos, los resultados son orientativos y no generalizables.
+- **Modelos gratuitos de OpenRouter.** OpenRouter ha ido retirando los sufijos `:free` (p. ej. `meta-llama/llama-3.3-70b-instruct:free` ya no existe). Si usas OpenRouter, comprueba que el modelo siga disponible en su catálogo.
 
 ## Autores
 
-Equipo 3 (asignatura de Ingeniería de datos / sistemas inteligentes, curso 2025-2026):
+Equipo 1 (curso 2025-2026):
 
-- Alejandro
-- Miguel
-- Javier Cagigal
+- Jose Ramon
+- Guillermo
+- Dylan
+- Tomas
 
-Repositorio: https://github.com/JavierCagigal/proy-rag
+Repositorio: https://github.com/William-glj/RAG

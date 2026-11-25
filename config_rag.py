@@ -114,8 +114,8 @@ TIPOS_RELEVANTES_IA = {"academico", "divulgacion"}
 # orientativa: que un fragmento contenga la palabra no garantiza que responda
 # bien a la pregunta.
 
-"""
 PREGUNTAS_PRUEBA = [
+    # --- Preguntas generales y factuales ---
     {"pregunta": "¿Cómo se representa a HAL 9000 en 2001: Una odisea del espacio?",
      "palabras_clave": ["HAL"]},
     {"pregunta": "¿Qué opinan los usuarios de TMDB sobre Ex Machina?",
@@ -132,14 +132,10 @@ PREGUNTAS_PRUEBA = [
      "palabras_clave": ["inteligencia artificial"]},
     {"pregunta": "¿Qué dice la tesis sobre la cibernética en 2001?",
      "palabras_clave": ["cibern*"]},
-]
-"""
-#Más especificas
-PREGUNTAS_PRUEBA = [
+
+    # --- Preguntas más específicas / analíticas ---
     {"pregunta": "¿Los humanos somos reemplazables?",
      "palabras_clave": ["replicantes"]},
-    {"pregunta": "¿Qué opinan los usuarios de TMDB sobre Ex Machina?",
-     "palabras_clave": ["Ex Machina"]},
     {"pregunta": "¿La revolución fue un avance, la digitalización una mejora pero la IA es necesaria? Todos los descubrimientos mejoran o empeoran las condiciones",
      "palabras_clave": ["tecnología"]},
     {"pregunta": "GEMINI, CLAUDE CODE, OpenAI ¿Qué similitudes comparten con el chip STEM? ¿Darle el control de nuestros ordenadores es igual a entregar nuestro cuerpo?",
@@ -151,3 +147,4 @@ PREGUNTAS_PRUEBA = [
     {"pregunta": "Cuando existe una herramienta mejor que nosotros, ¿qué nos queda si dependemos de ella?",
      "palabras_clave": ["herramienta"]},
 ]
+
