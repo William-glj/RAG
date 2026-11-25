@@ -1,0 +1,37 @@
+# ============================================================================
+# .dockerignore — qué NO se copia dentro de la imagen (docker build).
+# ============================================================================
+
+# Git
+.git
+.gitignore
+
+# Entorno virtual y cachés de Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Secretos: NUNCA deben acabar dentro de la imagen
+.env
+.env.*
+
+# Datos generados por el pipeline (no hacen falta para servir la app)
+datosDescargados/
+experimentos_chunking/
+resultados_llm/
+
+# Artefactos de Quarto y notas personales
+presentacion.html
+presentacion_files/
+presentacion.qmd
+*.pdf
+Tareas.md
+puntoA.md
+enlacesHTML.txt
+ultimos_cambios.md
+
+# No excluimos indice_chroma/ ni requirements.txt: son necesarios en la imagen.

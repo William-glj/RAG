@@ -41,8 +41,12 @@ dist/
 #   python limpiar_datos.py
 datosDescargados/
 experimentos_chunking/
-indice_chroma/
 resultados_llm/
+
+# NOTA: indice_chroma/ NO se ignora a propósito: la app web (app.py) lo
+# necesita en el servidor de despliegue (Hugging Face Spaces, Streamlit
+# Cloud...). Se versiona (~18 MB) para no tener que reconstruir el índice
+# en la nube.
 
 # ============================================================
 #  Artefactos de Quarto (generados)
