@@ -75,3 +75,9 @@ Desktop.ini
 *.swp
 .idea/
 .vscode/
+
+# Sitio Quarto generado (se publica en la rama gh-pages)
+_site/
+/.quarto/
+
+**/*.quarto_ipynb

@@ -2,6 +2,9 @@
 title: "Trabajo 2: Diseño, Implementación y Evaluación de un Sistema RAG"
 subtitle: "El cine de ciencia ficción y el miedo a la tecnología"
 author: "Jose Ramon, Guillermo, Dylan, Tomas"
+date: "2026-11-27"
+lang: es
+output-file: index.html
 format:
   html:
     theme: cosmo
@@ -15,6 +18,12 @@ format:
 # Resumen del proyecto {.unnumbered}
 
 Siguiendo con la temática anterior, el objetivo de este proyecto es construir y desplegar un sistema RAG completo especializado en dicho dominio. A partir de una base de conocimiento propia, el sistema busca demostrar de forma empírica su superioridad frente a un modelo de lenguaje (LLM) base sin contexto externo, logrando mitigar las alucinaciones y aportar información especializada, precisa y fundamentada sobre el género y sus temáticas.
+
+::: {.callout-note title="🔗 Enlaces del proyecto"}
+- **App desplegada (Streamlit):** <https://rtdgrag.streamlit.app/>
+- **Repositorio GitHub:** <https://github.com/William-glj/RAG>
+- **Diapositivas de la exposición:** [diapositivas.html](diapositivas.html)
+:::
 
 # Introducción y Objetivos
 
@@ -352,30 +361,57 @@ for i in range(0, len(fragmentos), cfg.LOTE_CHROMA):
 
 Definimos **14 preguntas** en `config_rag.py`: **8 factuales** (HAL 9000, nota de Ex Machina, opiniones de SensaCine, películas sobre IA…) y **6 analíticas** (¿somos reemplazables?, humano vs máquina, límites del avance tecnológico…). Son preguntas de nicho sobre **este corpus concreto**, que un LLM genérico no puede responder con precisión sin los documentos.
 
-### Sin RAG: alucinaciones y falta de conocimiento
+### Metodología
 
-Sin contexto, el modelo responde de memoria y **se inventa los datos concretos**. El ejemplo más claro:
+Las mismas preguntas se lanzan en la app en modo **"Comparar ambos"**: el **mismo modelo** (`gemini-3.1-flash-lite`) responde primero sin contexto y después con los `k = 5` fragmentos recuperados de ChromaDB. Así la única diferencia entre las dos respuestas es el RAG.
 
-| Pregunta | Sin RAG | Con RAG |
+Presentamos **dos pruebas** representativas, ejecutadas en la app desplegada (capturas reales):
+
+### Prueba 1 · Dato factual: nota y votos de *Ex Machina* en IMDb
+
+![Respuesta Sin RAG vs Con RAG en la app desplegada](img/prueba1_exmachina.png){fig-align="center" width="100%"}
+
+| | Sin RAG | Con RAG |
 |---|---|---|
-| ¿Qué nota tiene *Ex Machina* en IMDb y cuántos votos? | "7.7/10, basada en **≈615.000** votos" ❌ | "nota **7.7**, basada en **648.893** votos [1]" ✅ |
+| Nota IMDb | 7.7 | 7.7 |
+| Nº de votos | "aproximadamente **615.000**" ❌ (inventado) | **648.893** ✅ citando el fragmento [1] |
+| Año | 2014 | 2015 (año de la ficha de IMDb/TMDB del corpus) |
 
-- **Sin RAG** alucina el número de votos (~615.000).
-- **Con RAG** recupera la ficha exacta y cita **648.893 votos** con su fuente.
+- **Sin RAG**, el modelo *acierta la nota* (dato muy conocido) pero **alucina el número de votos**, y lo dice con total seguridad ("a día de hoy").
+- **Con RAG**, el recuperador encuentra la **ficha de la película** (tipo `ficha`, distancia coseno 0.119, la más cercana) generada por nuestro pipeline a partir de los datasets de IMDb, y el modelo copia el dato exacto citando la fuente.
 
-Otro ejemplo: ante *"¿Qué dice la tesis sobre la cibernética en 2001?"*, sin RAG da una respuesta genérica sobre HAL; **con RAG** recupera el contenido real de la tesis UACM (la cibernética como *"desconexión del hombre con sus emociones"*, la relación de control entre tecnología y personas, etc.).
+![Fragmentos recuperados para la prueba 1: la ficha de IMDb/TMDB aparece en primer lugar](img/prueba1_fragmentos.png){fig-align="center" width="85%"}
 
-### Con RAG: respuestas ancladas en los fragmentos
+### Prueba 2 · Conocimiento de nicho: opiniones de SensaCine sobre *2001*
 
-El sistema recupera los `k` fragmentos más cercanos y obliga al modelo a responder **solo con ellos, citándolos entre corchetes** (prompt `SISTEMA` en `con_rag.py`). Además, cuando la respuesta no está en los fragmentos, el modelo lo dice explícitamente (*"No hay información suficiente en la base de datos"*) en lugar de inventar — exactamente el objetivo de mitigar alucinaciones.
+![Prueba 2 en modo "Comparar ambos"](img/prueba2_sensacine.png){fig-align="center" width="100%"}
 
-### Resultados
+- **Sin RAG**: se inventa una **"nota media de 4.2 sobre 5"** y describe dos posturas genéricas ("los entusiastas" / "los críticos") que podrían valer para cualquier clásico. No cita ninguna opinión concreta: es **plausible pero no verificable**.
+- **Con RAG**: los 5 fragmentos recuperados son opiniones reales de espectadores de SensaCine (tipo `opinion_espectadores`, separadas por autor en el chunking). La respuesta cita expresiones literales ("obra maestra", "clase magistral de cine", "una de las películas más sobrevaloradas de la historia", "petardo") e indica en cada afirmación de qué fragmento sale ([1], [2], [5]…).
 
-Los resultados completos están en `resultados_llm/sin_rag.csv` y `resultados_llm/con_rag.csv` (14 filas cada uno, generados con `sin_rag.py` y `con_rag.py`).
+### Control de alucinaciones fuera del dominio
 
-::: {.callout-tip title="📸 Para la defensa"}
-Añade aquí una captura de la app en modo "Comparar ambos" mostrando la misma pregunta respondida sin RAG y con RAG lado a lado, con los fragmentos citados.
-:::
+Si se pregunta algo que **no está en el corpus** (por ejemplo, *"¿Cuántos Óscar ganó Oppenheimer y quién compuso su banda sonora?"*), el modo Con RAG responde **"No hay información suficiente en la base de datos."** en lugar de inventar, porque el prompt de sistema le obliga a usar solo los fragmentos:
+
+```python
+# con_rag.py · prompt de sistema
+SISTEMA = (
+    "Eres un asistente especializado en cine de ciencia ficción. Responde en español "
+    "usando EXCLUSIVAMENTE la información de los fragmentos proporcionados. Cita entre "
+    "corchetes los fragmentos que uses, por ejemplo [2]. Si la respuesta no aparece en "
+    "los fragmentos, responde: 'No hay información suficiente en la base de datos.'"
+)
+```
+
+### Conclusión de la evaluación
+
+| Criterio | Sin RAG | Con RAG |
+|---|---|---|
+| Datos concretos (votos, notas) | Aproximados o inventados | Exactos, del corpus |
+| Trazabilidad | Ninguna | Cita de fragmentos `[n]` + fuente visible en la app |
+| Pregunta fuera del corpus | Responde igualmente (riesgo de alucinar) | Reconoce que no lo sabe |
+
+El banco completo de 14 preguntas (`config_rag.py`) puede regenerarse con `sin_rag.py` y `con_rag.py`, que guardan los resultados en `resultados_llm/`.
 
 ## Fase D: Interfaz de Usuario y Despliegue
 
@@ -388,17 +424,28 @@ Añade aquí una captura de la app en modo "Comparar ambos" mostrando la misma p
 - **Parámetros:** número de fragmentos `k`, filtro por tipo de documento y filtro "solo películas relevantes a IA".
 - **Trazabilidad:** cada respuesta con RAG muestra los fragmentos usados, con fuente y distancia.
 
-Los recursos pesados (modelo de embeddings e índice) se cargan una sola vez con `@st.cache_resource`.
+Los recursos pesados (modelo de embeddings e índice) se cargan una sola vez con `@st.cache_resource`:
+
+```python
+# app.py
+@st.cache_resource(show_spinner="Cargando el modelo de embeddings y el índice...")
+def obtener_base():
+    return abrir_base(cfg.INDICE_DIR, EmbeddingsE5())
+```
+
+![Interfaz desplegada en Streamlit Community Cloud](img/interfaz.png){fig-align="center" width="100%"}
 
 ### Despliegue público
 
-La app está desplegada en **Streamlit Community Cloud**, que lee el repositorio de GitHub e instala `requirements.txt`. Las claves se inyectan como **secretos** (`st.secrets`, formato TOML) y `cargar_secretos()` las copia al entorno para que `llm_comun.py` las lea igual que desde el `.env` local.
+La app está desplegada en **Streamlit Community Cloud** → <https://rtdgrag.streamlit.app/>. La plataforma lee el repositorio de GitHub e instala `requirements.txt`. Las claves se inyectan como **secretos** (`st.secrets`, formato TOML) y `cargar_secretos()` las copia al entorno para que `llm_comun.py` las lea igual que desde el `.env` local.
 
 ::: {.callout-important title="🔑 Nota sobre Hugging Face Spaces"}
 Inicialmente se consideró HF Spaces, pero desde 2025 los Spaces con SDK Docker/Gradio requieren plan de pago para cuentas nuevas. Por eso el despliegue final es en Streamlit Community Cloud (gratis).
 :::
 
-📸 *Añade aquí una captura de la interfaz desplegada.*
+::: {.callout-warning title="⏰ Apps dormidas"}
+Streamlit Community Cloud **duerme las apps tras unos días sin visitas**. Al abrirla aparece *"This app has gone to sleep"*: se pulsa **"Yes, get this app back up!"** y en ~1–2 minutos vuelve a estar disponible (el índice ChromaDB está versionado en el repositorio, así que no hay que reconstruirlo).
+:::
 
 ## Fase E: Técnicas Avanzadas de RAG (Opcional)
 
@@ -448,20 +495,26 @@ Esta misma memoria (generada con Quarto) cubre: motivación y procedencia de los
 
 ### Publicación online
 
-La memoria se publica en línea (GitHub Pages o Quarto Pub) y su URL se comparte en Loop.
+La memoria y las diapositivas forman un pequeño sitio Quarto (`_quarto.yml`) que se publica en **GitHub Pages** desde la rama `gh-pages`:
+
+```bash
+quarto render            # genera _site/ (memoria + diapositivas)
+quarto publish gh-pages  # sube _site/ a la rama gh-pages
+```
 
 # Exposición y Criterios de Evaluación
 
 - **Fecha:** 27 de noviembre.
 - **Reparto de roles** (uno por miembro):
-  - Captación y pipeline de datos → *(nombre)*
-  - Vector DB, chunking y librerías → *(nombre)*
-  - Interfaz y despliegue → *(nombre)*
-  - Evaluación comparativa y técnicas avanzadas → *(nombre)*
+  - Captación y pipeline de datos (Fase A) → **Guillermo**
+  - Vector DB, chunking y librerías (Fase B) → **Tomas**
+  - Interfaz y despliegue (Fase D) → **Dylan**
+  - Evaluación comparativa y técnicas avanzadas (Fases C y E) → **Jose Ramon**
 - **Criterios a cubrir:** automatización robusta, fundamentación técnica, claridad de la comparativa, calidad de la interfaz, documentación y dominio individual.
 
 # Enlaces {.unnumbered}
 
 - **Repositorio GitHub** → https://github.com/William-glj/RAG
-- **App desplegada (Streamlit)** → *(pega aquí la URL de share.streamlit.io)*
-- **Web Quarto** → *(pega aquí la URL publicada)*
+- **App desplegada (Streamlit)** → <https://rtdgrag.streamlit.app/>
+- **Web Quarto** → <https://william-glj.github.io/RAG/>
+- **Diapositivas** → <https://william-glj.github.io/RAG/diapositivas.html>
