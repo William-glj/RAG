@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 380" font-family="sans-serif" font-size="13">
+<rect width="720" height="380" fill="white"/>
+<line x1="70" x2="640" y1="320" y2="320" stroke="#e5e5e5"/>
+<text x="62" y="324" text-anchor="end" fill="#3a6ea5">0.0</text>
+<line x1="70" x2="640" y1="262.0" y2="262.0" stroke="#e5e5e5"/>
+<text x="62" y="266.0" text-anchor="end" fill="#3a6ea5">0.2</text>
+<line x1="70" x2="640" y1="204.0" y2="204.0" stroke="#e5e5e5"/>
+<text x="62" y="208.0" text-anchor="end" fill="#3a6ea5">0.4</text>
+<line x1="70" x2="640" y1="146.0" y2="146.0" stroke="#e5e5e5"/>
+<text x="62" y="150.0" text-anchor="end" fill="#3a6ea5">0.6</text>
+<line x1="70" x2="640" y1="87.99999999999999" y2="87.99999999999999" stroke="#e5e5e5"/>
+<text x="62" y="91.99999999999999" text-anchor="end" fill="#3a6ea5">0.8</text>
+<line x1="70" x2="640" y1="30.0" y2="30.0" stroke="#e5e5e5"/>
+<text x="62" y="34.0" text-anchor="end" fill="#3a6ea5">1.0</text>
+<text x="648" y="324.0" fill="#c8553d">0</text>
+<text x="648" y="227.33333333333334" fill="#c8553d">3 000</text>
+<text x="648" y="130.66666666666669" fill="#c8553d">6 000</text>
+<text x="648" y="34.0" fill="#c8553d">9 000</text>
+<rect x="95.65" y="78.43" width="62.7" height="241.57" fill="#7fa3cc"/>
+<line x1="127.0" x2="127.0" y1="30.0" y2="134.39999999999998" stroke="#333" stroke-width="1.5"/>
+<line x1="121.0" x2="133.0" y1="134.39999999999998" y2="134.39999999999998" stroke="#333" stroke-width="1.5"/>
+<line x1="121.0" x2="133.0" y1="30.0" y2="30.0" stroke="#333" stroke-width="1.5"/>
+<text x="127.0" y="340" text-anchor="middle">rec. 500</text>
+<rect x="209.65" y="133.53" width="62.7" height="186.47" fill="#7fa3cc"/>
+<line x1="241.0" x2="241.0" y1="70.6" y2="206.9" stroke="#333" stroke-width="1.5"/>
+<line x1="235.0" x2="247.0" y1="206.9" y2="206.9" stroke="#333" stroke-width="1.5"/>
+<line x1="235.0" x2="247.0" y1="70.6" y2="70.6" stroke="#333" stroke-width="1.5"/>
+<text x="241.0" y="340" text-anchor="middle">rec. 1000</text>
+<rect x="323.65" y="88.57999999999998" width="62.7" height="231.42000000000002" fill="#1f4e85"/>
+<line x1="355.0" x2="355.0" y1="44.500000000000014" y2="143.10000000000002" stroke="#333" stroke-width="1.5"/>
+<line x1="349.0" x2="361.0" y1="143.10000000000002" y2="143.10000000000002" stroke="#333" stroke-width="1.5"/>
+<line x1="349.0" x2="361.0" y1="44.500000000000014" y2="44.500000000000014" stroke="#333" stroke-width="1.5"/>
+<text x="355.0" y="340" text-anchor="middle">rec. 1500</text>
+<rect x="437.65" y="92.05999999999999" width="62.7" height="227.94" fill="#7fa3cc"/>
+<line x1="469.0" x2="469.0" y1="44.500000000000014" y2="148.9" stroke="#333" stroke-width="1.5"/>
+<line x1="463.0" x2="475.0" y1="148.9" y2="148.9" stroke="#333" stroke-width="1.5"/>
+<line x1="463.0" x2="475.0" y1="44.500000000000014" y2="44.500000000000014" stroke="#333" stroke-width="1.5"/>
+<text x="469.0" y="340" text-anchor="middle">rec. 2000</text>
+<rect x="551.65" y="71.47" width="62.7" height="248.53" fill="#7fa3cc"/>
+<line x1="583.0" x2="583.0" y1="30.0" y2="122.79999999999998" stroke="#333" stroke-width="1.5"/>
+<line x1="577.0" x2="589.0" y1="122.79999999999998" y2="122.79999999999998" stroke="#333" stroke-width="1.5"/>
+<line x1="577.0" x2="589.0" y1="30.0" y2="30.0" stroke="#333" stroke-width="1.5"/>
+<text x="583.0" y="340" text-anchor="middle">fijo 1500</text>
+<polyline fill="none" stroke="#c8553d" stroke-width="2.5" points="127.0,242.50555555555556 241.0,173.74333333333334 355.0,105.75444444444445 469.0,53.19999999999999 583.0,77.01222222222222"/>
+<circle cx="127.0" cy="242.50555555555556" r="5" fill="#c8553d"/>
+<circle cx="241.0" cy="173.74333333333334" r="5" fill="#c8553d"/>
+<circle cx="355.0" cy="105.75444444444445" r="5" fill="#c8553d"/>
+<circle cx="469.0" cy="53.19999999999999" r="5" fill="#c8553d"/>
+<circle cx="583.0" cy="77.01222222222222" r="5" fill="#c8553d"/>
+<text transform="translate(20,175.0) rotate(-90)" text-anchor="middle" fill="#3a6ea5">MRR (barras, IC 95 %)</text>
+<text transform="translate(702,175.0) rotate(90)" text-anchor="middle" fill="#c8553d">Contexto top-5 (caracteres)</text>
+<line x1="70" x2="640" y1="320" y2="320" stroke="#333"/></svg>
