@@ -107,6 +107,30 @@ for intento in range(reintentos):
     r.raise_for_status()
 ```
 
+**Configuración de las consultas (cabecera de `cargar_datos.py`):**
+
+``` python
+# cargar_datos.py · constantes de configuración
+TMDB_TERMINOS_KEYWORD = ["artificial intelligence", "robot", "android", "cyborg",
+                         "technology", "cyberpunk", "dystopia"]
+
+TERMINOS_IA = ["artificial intelligence", "a.i.", "robot", "android", "cyborg",
+               "machine", "technology", "cyberpunk", "dystopia", "singularity",
+               "automata", "terminator", "blade runner", "ex machina",
+               "ghost in the shell", "matrix"]
+
+PELICULAS_CANONICAS = [("2001 a space odyssey", 1968), ("metropolis", 1927),
+                       ("blade runner", 1982), ("the terminator", 1984),
+                       ("the matrix", 1999), ("ex machina", 2015), ...]  # 34 en total
+
+TMDB_PAGINAS_GENERO = 5    # páginas de /discover por género (20 pelis/pág)
+TMDB_PAGINAS_KEYWORD = 1   # páginas de /discover por keyword
+TMDB_MAX_DETALLES = 200    # máx. películas a las que pedimos detalles
+TMDB_MAX_REVIEWS = 60      # máx. películas a las que pedimos reseñas
+TMDB_PAUSA = 0.28          # pausa entre peticiones (~4 req/s)
+USER_AGENT = "Mozilla/5.0 ..."
+```
+
 El enunciado permite **4 tipos de fuentes**; este script cubre **2 de ellas**:
 
 | Tipo (enunciado) | Qué usamos |
