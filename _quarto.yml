@@ -1,23 +1,15 @@
 project:
   type: website
   output-dir: _site
-  # Solo se renderizan la memoria y las diapositivas (no el README).
   render:
     - presentacion.qmd
-    - diapositivas.qmd
-  resources:
-    - img/
-
 website:
-  title: "RAG · Cine de ciencia ficción e IA"
-  navbar:
-    left:
-      - text: "Memoria técnica"
-        href: index.html
-      - text: "Diapositivas"
-        href: diapositivas.html
-    right:
-      - text: "App (Streamlit)"
-        href: https://rtdgrag.streamlit.app/
-      - icon: github
-        href: https://github.com/William-glj/RAG
+  title: "Sistema RAG · Cine"
+format:
+  html:
+    theme: cosmo
+    lang: es
+    toc: true
+    toc-depth: 3
+    code-copy: true
+    embed-resources: true
