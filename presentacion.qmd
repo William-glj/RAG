@@ -14,27 +14,41 @@ En este proyecto construimos y desplegamos un sistema RAG (*Retrieval-Augmented 
 
 ## 1. Fase A (Captación Automatizada de Datos (Data Pipeline))
 
-En este apartado explicamos cómo reunimos el corpus. Un corpus útil para el RAG debe cumplir **dos requisitos**:
+**Justificación de la arquitectura RAG**
+Mitigación de alucinaciones (Grounding): Mecanismo de control que restringe la generación del LLM únicamente a evidencia documental verificable, recuperada previamente a la síntesis de la respuesta.
 
-- **Enriquecido** → variedad de fuentes (prensa, crítica, ámbito académico, público), de tipos de texto y de perspectivas (alarmistas, éticas, críticas). Así los textos **no dicen todos lo mismo**.
-- **Específico** → todos los textos giran en torno al **miedo a la innovación y a los avances tecnológicos**, sin dispersarse en otros tópicos de la ciencia ficción.
+Inyección de conocimiento especializado y dinámico: Incorporación de información de dominio específico y análisis recientes que suplen los vacíos o la desactualización de los pesos preentrenados del modelo base.
+
+**Criterios de diseño del corpus documental**
+Para garantizar respuestas precisas y contextualizadas sobre la tecnofobia y el impacto de la innovación, el corpus debe cumplir dos requisitos:
+
+Enriquecido (Diversidad): Integración de múltiples fuentes (prensa, crítica cultural, literatura académica y divulgación), tipologías textuales y enfoques (éticos, críticos, alarmistas) para evitar sesgos de perspectiva.
+
+Específico (Acotación temática): Selección estricta centrada en el miedo a la innovación y los avances tecnológicos, descartando otros subgéneros o tópicos generalistas de la ciencia ficción.
+
+**Taxonomía del corpus implementado**
+La planificación teórica se materializó en dos ejes temáticos principales:
+
+Inteligencia Artificial y Autómatas: Representaciones de entidades autónomas y sus conflictos (Metrópolis, HAL 9000, Blade Runner, Ex Machina, Her, Terminator).
+
+Miedos tecnológicos y evolución: Impacto social y antropológico (deshumanización industrial, complejo de Frankenstein, biotecnología y sistemas de vigilancia).
 
 La planificación cubría **dos ramas**: la **IA** (autómatas de *Metrópolis*, HAL 9000, *Blade Runner*, *Ex Machina*, *Her*, *Terminator*…) y los **miedos y su evolución** (deshumanización industrial, complejo de Frankenstein, biotecnología, vigilancia…).
 
 Todo el proceso está automatizado con **tres scripts de Python** que se ejecutan en orden, sin ninguna carga manual de ficheros:
 
 | Orden | Script | Función en el pipeline |
-| :---: | :--- | :--- |
+|:--------------------------:|:---------------------|:---------------------|
 | **1** | `cargar_datos.py` | Descargar los datasets de IMDb y consultar la API de TMDB. |
 | **2** | `scraping_criticas.py` | Extraer críticas web, PDFs académicos y transcripciones de vídeo. |
 | **3** | `limpiar_datos.py` | Limpiar y normalizar todo en `./datosDescargados/limpio`. |
 
-: Scripts de automatización {.table-bordered .table-hover tbl-colwidths="[10,30,60]"}
+: Scripts de automatización
 
 La captación produce dos tipos de datos según su formato:
 
 | Tipo | Procedencia |
-|---|---|
+|------------------------------------|------------------------------------|
 | **Estructurados** | IMDb (datasets `title.basics.tsv.gz`, `title.ratings.tsv.gz`) y TMDB (API v3: metadatos, ratings y reseñas) |
 | **No estructurados** | Críticas web, PDFs académicos y transcripciones de vídeo |
 
@@ -52,7 +66,7 @@ Ambas se enlazan por `imdb_id` en `cruceIMDBTMDB.csv`, y junto a `imdb_peliculas
 
 **Primer filtro de especificidad (IMDb):**
 
-```python
+``` python
 # cargar_datos.py · cargar_basics()
 mascara = (
     (df["titleType"] == "movie")            # solo películas
@@ -66,7 +80,7 @@ De los millones de títulos de IMDb, este filtro conserva únicamente las **pel�
 
 **Robustez de la descarga (`descargar_archivo()`):**
 
-```python
+``` python
 # cargar_datos.py · descargar_archivo()
 if destino.exists():                    # idempotencia: no se re-descarga
     return destino
@@ -77,7 +91,7 @@ with requests.get(url, stream=True) as r:
 
 **Consultas a TMDB con reintentos (`tmdb_get()`):**
 
-```python
+``` python
 # cargar_datos.py · tmdb_get()
 for intento in range(reintentos):
     r = session.get(url, params=params, timeout=30)
@@ -93,7 +107,7 @@ for intento in range(reintentos):
 El enunciado permite **4 tipos de fuentes**; este script cubre **2 de ellas**:
 
 | Tipo (enunciado) | Qué usamos |
-|---|---|
+|------------------------------------|------------------------------------|
 | Datasets estructurados | IMDb datasets oficiales (`title.basics.tsv.gz`, `title.ratings.tsv.gz`) |
 | APIs públicas | TMDB API v3 (metadatos, sinopsis, keywords y **reseñas**) |
 
@@ -103,7 +117,7 @@ El enunciado permite **4 tipos de fuentes**; este script cubre **2 de ellas**:
 
 Cada entrada de `TARGETS` es una tupla `(nombre, fuente, url, extractor)`:
 
-```python
+``` python
 # scraping_criticas.py · TARGETS  (cada fila = un documento del corpus)
 ("Blade Runner 2049 - la apoteosis de lo humano (CinemaNet)",
  "CinemaNet",
@@ -113,7 +127,7 @@ Cada entrada de `TARGETS` es una tupla `(nombre, fuente, url, extractor)`:
 
 **Un extractor por sitio** (cada web tiene un HTML distinto):
 
-```python
+``` python
 EXTRACTORES = {
     "espinof": extraer_espinof, "sensacine": extraer_sensacine,
     "lavanguardia": extraer_lavanguardia, "rogerebert": extraer_rogerebert,
@@ -126,7 +140,7 @@ Cada extractor localiza el contenedor del artículo con selectores CSS (`select_
 
 **Robustez del scraping:**
 
-```python
+``` python
 # scraping_criticas.py · _get()  (reintentos ante 429/5xx)
 for intento in range(reintentos):
     r = requests.get(url, headers=HEADERS, timeout=timeout)
@@ -140,8 +154,8 @@ for intento in range(reintentos):
 
 Este script cubre las otras **2 de las 4 fuentes** del enunciado (*extracción web* y *documentos no estructurados*), más **4 transcripciones de vídeo**:
 
-| # | Documento | Tipo de fuente | Eje temático |
-|---|---|---|---|
+| \# | Documento | Tipo de fuente | Eje temático |
+|------------------|------------------|------------------|------------------|
 | 1 | *2001: Una odisea del espacio* — crítica (Espinof) | Crítica cinematográfica | IA (HAL 9000) |
 | 2 | *2001* — opiniones de espectadores (SensaCine) | Opinión del público | IA |
 | 3 | *2001* — tesis (Repositorio UACM, PDF) | Investigación académica | Cibernética / máquina |
@@ -171,7 +185,7 @@ Este script cubre las otras **2 de las 4 fuentes** del enunciado (*extracción w
 
 **Segundo filtro de especificidad** (sobre el cruce IMDb↔TMDB):
 
-```python
+``` python
 # limpiar_datos.py · limpiar_csvs()
 tiene_nota = cruce["rating_imdb"].notna() | cruce["rating_tmdb"].notna()
 has_review = (cruce["imdb_id"].isin(review_imdb_ids)
@@ -194,16 +208,16 @@ Además:
 
 ### 1.4. Resultados del pipeline
 
-| Dato | Antes | Después |
-|---|---|---|
-| IMDb películas (Sci-Fi) | 16 759 | **46** con reseña |
-| TMDB películas | 177 | **59** |
-| TMDB reseñas | 484 | **460** |
-| Cruce IMDb↔TMDB | 16 813 | **59** |
-| Críticas/análisis scrapeados | 22 | **22** (688 339 caracteres) |
+| Dato                         | Antes  | Después                     |
+|------------------------------|--------|-----------------------------|
+| IMDb películas (Sci-Fi)      | 16 759 | **46** con reseña           |
+| TMDB películas               | 177    | **59**                      |
+| TMDB reseñas                 | 484    | **460**                     |
+| Cruce IMDb↔TMDB              | 16 813 | **59**                      |
+| Críticas/análisis scrapeados | 22     | **22** (688 339 caracteres) |
 
 - **59 películas** con reseña de texto, **todas relevantes a IA/tecnología**.
-- **~1 293 692 caracteres** de texto recuperable en total (reseñas + críticas + sinopsis).
+- **\~1 293 692 caracteres** de texto recuperable en total (reseñas + críticas + sinopsis).
 
 Estos números salen de `datosDescargados/limpio/resumen_limpieza.txt`.
 
@@ -232,18 +246,18 @@ Así, todo el pipeline de la Fase B se reduce a una cadena legible y repetible: 
 
 Elegimos **ChromaDB** por cuatro motivos:
 
-1. **Persistencia en disco** (`persist_directory`): no hace falta levantar un servidor; el índice vive en `indice_chroma/`.
-2. **Filtros de metadatos nativos** (`filter`): los usamos para filtrar por tipo de documento y por relevancia a IA.
-3. **Integración con LangChain** (`langchain-chroma`).
-4. **Código abierto y ligero**: el corpus (~1 400 fragmentos) cabe holgadamente.
+1.  **Persistencia en disco** (`persist_directory`): no hace falta levantar un servidor; el índice vive en `indice_chroma/`.
+2.  **Filtros de metadatos nativos** (`filter`): los usamos para filtrar por tipo de documento y por relevancia a IA.
+3.  **Integración con LangChain** (`langchain-chroma`).
+4.  **Código abierto y ligero**: el corpus (\~1 400 fragmentos) cabe holgadamente.
 
 ### 2.3. Modelo de embeddings: `intfloat/multilingual-e5-small`
 
-El corpus mezcla **español** (críticas, tesis, artículos) e **inglés** (reseñas de TMDB, Roger Ebert), por lo que el modelo debe ser **multilingüe**. Elegimos `multilingual-e5-small` (384 dimensiones) y **descartamos** `paraphrase-multilingual-MiniLM-L12-v2` porque trunca cada texto a 128 tokens (~500 caracteres): con fragmentos de 1 500 caracteres, la mitad del fragmento quedaría fuera del embedding.
+El corpus mezcla **español** (críticas, tesis, artículos) e **inglés** (reseñas de TMDB, Roger Ebert), por lo que el modelo debe ser **multilingüe**. Elegimos `multilingual-e5-small` (384 dimensiones) y **descartamos** `paraphrase-multilingual-MiniLM-L12-v2` porque trunca cada texto a 128 tokens (\~500 caracteres): con fragmentos de 1 500 caracteres, la mitad del fragmento quedaría fuera del embedding.
 
 Los modelos **E5** exigen un prefijo que distingue los dos usos: `"passage: "` al indexar y `"query: "` al consultar. Nuestra clase `EmbeddingsE5` los añade automáticamente:
 
-```python
+``` python
 # rag_comun.py · EmbeddingsE5
 def embed_documents(self, texts):
     textos = [self.prefijo_documento + t for t in texts]   # "passage: "
@@ -258,11 +272,11 @@ def embed_query(self, text):
 
 Usamos **`RecursiveCharacterTextSplitter`** (chunking recursivo) con estos parámetros:
 
-- **`chunk_size = 1500`** caracteres (~265 tokens de media, por debajo del límite de 512 tokens de E5).
+- **`chunk_size = 1500`** caracteres (\~265 tokens de media, por debajo del límite de 512 tokens de E5).
 - **`chunk_overlap = 225`** (15 %), para no cortar una idea a mitad.
 - **Separadores** `["\n\n", "\n", ". ", " ", ""]`: corta primero por párrafo, luego por línea, luego por frase y por palabra. Respeta la estructura del texto (solo parte una palabra como último recurso).
 
-```python
+``` python
 # construir_indice.py · trocear()
 splitter = RecursiveCharacterTextSplitter(
     chunk_size=chunk_size, chunk_overlap=chunk_overlap,
@@ -286,13 +300,13 @@ El tamaño es un compromiso:
 
 Lo medimos con las **14 preguntas de prueba** de `config_rag.py` y el mismo criterio de acierto que `comparar_chunking.py`, sobre el mismo corpus y con solapamiento del 15 %. Probamos cuatro tamaños con el troceado recursivo y, para comparar estrategias, un troceado de **tamaño fijo** de 1500 (corta cada 1500 caracteres sin respetar párrafos ni frases). Para cada variante medimos la **recuperación** y también **lo que recibe el LLM**:
 
-- **hit@1 / hit@5**: proporción de preguntas con un fragmento correcto en el 1.^er^ puesto / entre los 5 primeros.
+- **hit\@1 / hit\@5**: proporción de preguntas con un fragmento correcto en el 1.^er^ puesto / entre los 5 primeros.
 - **MRR**: media de 1/posición del primer fragmento correcto (1 = siempre el primero; 0,5 = de media en el segundo puesto). Entre paréntesis, su intervalo de confianza del 95 % (*bootstrap*).
 - **Contexto top-5**: caracteres que recibe el LLM con los 5 fragmentos recuperados.
-- **> 512 tokens**: fragmentos que el modelo de embeddings no puede leer enteros.
+- **\> 512 tokens**: fragmentos que el modelo de embeddings no puede leer enteros.
 
-| Variante | Fragmentos | hit@1 | hit@5 | MRR (IC 95 %) | Contexto top-5 | > 512 tokens |
-|---|---|---|---|---|---|---|
+| Variante | Fragmentos | hit\@1 | hit\@5 | MRR (IC 95 %) | Contexto top-5 | \> 512 tokens |
+|-----------|-----------|-----------|-----------|-----------|-----------|-----------|
 | recursivo 500 | 3 728 | 0.786 | 0.929 | 0.833 (0.64–1.00) | 2 405 | 0 % |
 | recursivo 1000 | 1 914 | 0.571 | 0.714 | 0.643 (0.39–0.86) | 4 539 | 0 % |
 | **recursivo 1500** | **1 385** | **0.714** | **0.929** | **0.798 (0.61–0.95)** | **6 649** | **0,1 %** |
@@ -324,7 +338,7 @@ Las preguntas se lanzan en la aplicación en modo **"Comparar ambos"**: el **mis
 
 Con RAG, el prompt de sistema obliga al modelo a usar **solo** los fragmentos, a **citarlos** y a reconocer cuando no sabe algo:
 
-```python
+``` python
 # con_rag.py · prompt de sistema
 SISTEMA = (
     "Eres un asistente especializado en cine de ciencia ficción. Responde en español "
@@ -342,10 +356,10 @@ A continuación se muestran **dos pruebas**, ejecutadas en la aplicación desple
 
 ![Respuesta Sin RAG frente a Con RAG en la aplicación desplegada.](img/prueba1_exmachina.png)
 
-| | Sin RAG | Con RAG |
-|---|---|---|
+|   | Sin RAG | Con RAG |
+|------------------------|------------------------|------------------------|
 | Nota IMDb | 7.7 | 7.7 |
-| Nº de votos | "aproximadamente **615 000**" ❌ (inventado) | **648 893** ✅ citando el fragmento [1] |
+| Nº de votos | "aproximadamente **615 000**" ❌ (inventado) | **648 893** ✅ citando el fragmento \[1\] |
 
 - **Sin RAG**, el modelo acierta la nota (un dato muy conocido) pero **se inventa el número de votos**, y lo presenta con total seguridad ("a día de hoy").
 - **Con RAG**, el recuperador encuentra la **ficha de la película** (tipo `ficha`, distancia coseno 0.119, la más cercana), generada por nuestro pipeline a partir de los datasets de IMDb, y el modelo copia el dato exacto citando la fuente.
@@ -359,12 +373,12 @@ A continuación se muestran **dos pruebas**, ejecutadas en la aplicación desple
 ![Prueba 2 en modo "Comparar ambos".](img/prueba2_sensacine.png)
 
 - **Sin RAG**: se inventa una **"nota media de 4.2 sobre 5"** y describe dos posturas genéricas ("los entusiastas" / "los críticos") que podrían valer para cualquier clásico. No cita ninguna opinión concreta: es **plausible pero no verificable**.
-- **Con RAG**: los 5 fragmentos recuperados son opiniones reales de espectadores de SensaCine (tipo `opinion_espectadores`, separadas por autor en el chunking). La respuesta cita expresiones literales ("obra maestra", "clase magistral de cine", "una de las películas más sobrevaloradas de la historia", "petardo") e indica de qué fragmento sale cada afirmación ([1], [2], [5]…).
+- **Con RAG**: los 5 fragmentos recuperados son opiniones reales de espectadores de SensaCine (tipo `opinion_espectadores`, separadas por autor en el chunking). La respuesta cita expresiones literales ("obra maestra", "clase magistral de cine", "una de las películas más sobrevaloradas de la historia", "petardo") e indica de qué fragmento sale cada afirmación (\[1\], \[2\], \[5\]…).
 
 ### 3.4. Resumen final del apartado
 
 | Criterio | Sin RAG | Con RAG |
-|---|---|---|
+|------------------------|------------------------|------------------------|
 | Datos concretos (votos, notas) | Aproximados o inventados | Exactos, del corpus |
 | Trazabilidad | Ninguna | Cita de fragmentos `[n]` + fuente visible en la aplicación |
 | Pregunta fuera del corpus | Responde igualmente (riesgo de alucinar) | "No hay información suficiente en la base de datos." |
@@ -386,7 +400,7 @@ El modelo sin contexto responde con seguridad incluso cuando no sabe el dato, y 
 
 Los recursos pesados (modelo de embeddings e índice) se cargan una sola vez con `@st.cache_resource`:
 
-```python
+``` python
 # app.py
 @st.cache_resource(show_spinner="Cargando el modelo de embeddings y el índice...")
 def obtener_base():
@@ -397,7 +411,7 @@ def obtener_base():
 
 La aplicación está desplegada en **Streamlit Community Cloud** → <https://rtdgrag.streamlit.app/>. La plataforma lee el repositorio de GitHub e instala `requirements.txt`. Las claves se inyectan como **secretos** (`st.secrets`, formato TOML) y `cargar_secretos()` las copia al entorno para que `llm_comun.py` las lea igual que desde el `.env` local:
 
-```python
+``` python
 # app.py
 def cargar_secretos() -> None:
     for variables in VARIABLES.values():
@@ -406,10 +420,11 @@ def cargar_secretos() -> None:
                 os.environ[clave] = str(st.secrets[clave])
 ```
 
-El índice `indice_chroma/` se versiona en el repositorio (~18 MB) para no tener que reconstruirlo en la nube.
+El índice `indice_chroma/` se versiona en el repositorio (\~18 MB) para no tener que reconstruirlo en la nube.
 
-::: {.callout-note}
+::: callout-note
 ## Nota sobre Hugging Face Spaces
+
 Inicialmente se consideró HF Spaces, pero desde 2025 los Spaces con SDK Docker/Gradio requieren plan de pago para cuentas nuevas. Por eso el despliegue final es en Streamlit Community Cloud (gratis).
 :::
 
@@ -423,7 +438,7 @@ La aplicación permite a cualquier usuario hacer preguntas al sistema en tiempo 
 
 Antes de la búsqueda vectorial se puede filtrar por **tipo de documento** (`critica`, `resena`, `academico`, `divulgacion`, `ficha`, `opinion_espectadores`) y por **relevancia a IA** (`relevante_ia`), mediante el filtro de metadatos de Chroma:
 
-```python
+``` python
 # rag_comun.py · construir_filtro()
 def construir_filtro(tipo=None, solo_relevantes_ia=False):
     condiciones = []
@@ -448,38 +463,36 @@ De las técnicas avanzadas propuestas hemos implementado los **filtros de metada
 
 El sistema debe entenderse como una **prueba de concepto académica**. Funciona bien sobre su corpus, pero su alcance está acotado por el tamaño y la naturaleza de los datos.
 
----
+------------------------------------------------------------------------
 
 ### 6.1. Análisis Crítico
 
-* **Tamaño del corpus:** con unas 59 películas y 22 documentos, los resultados son orientativos y no generalizables.
-* **Métrica de recuperación orientativa:** `acierto@5` solo comprueba que aparezca una palabra clave en el fragmento recuperado; no mide si la respuesta final es correcta.
-* **Dependencia de proveedores externos:** los límites de peticiones de los proveedores (especialmente los modelos gratuitos de OpenRouter) pueden provocar errores 429. El sistema reintenta hasta tres veces con espera creciente.
-* **Reseñas de IMDb no disponibles:** IMDb no ofrece API pública de reseñas y su web bloquea el acceso automatizado, por eso las reseñas de texto proceden de TMDB.
-* **Fuentes vía Wayback Machine:** algunas críticas se obtienen de copias archivadas porque el sitio original bloquea el acceso automatizado.
-* **Aplicación en reposo:** Streamlit Community Cloud duerme las aplicaciones tras unos días sin visitas; al abrirla hay que pulsar *"Yes, get this app back up!"* y esperar 1–2 minutos.
+- **Tamaño del corpus:** con unas 59 películas y 22 documentos, los resultados son orientativos y no generalizables.
+- **Métrica de recuperación orientativa:** `acierto@5` solo comprueba que aparezca una palabra clave en el fragmento recuperado; no mide si la respuesta final es correcta.
+- **Dependencia de proveedores externos:** los límites de peticiones de los proveedores (especialmente los modelos gratuitos de OpenRouter) pueden provocar errores 429. El sistema reintenta hasta tres veces con espera creciente.
+- **Reseñas de IMDb no disponibles:** IMDb no ofrece API pública de reseñas y su web bloquea el acceso automatizado, por eso las reseñas de texto proceden de TMDB.
+- **Fuentes vía Wayback Machine:** algunas críticas se obtienen de copias archivadas porque el sitio original bloquea el acceso automatizado.
+- **Aplicación en reposo:** Streamlit Community Cloud duerme las aplicaciones tras unos días sin visitas; al abrirla hay que pulsar *"Yes, get this app back up!"* y esperar 1–2 minutos.
 
----
+------------------------------------------------------------------------
 
 ### 6.2. Líneas de Mejora
 
-* **Reranking:** reordenar los fragmentos recuperados con un modelo de relevancia (p. ej. FlashRank) antes de dárselos al LLM.
-* **Búsqueda híbrida (BM25 + vectorial):** combinar búsqueda léxica y semántica para términos exactos como nombres propios, notas o cifras.
-* **Evaluación automática de respuestas:** medir la fidelidad de las respuestas a los fragmentos, no solo la recuperación.
+- **Reranking:** reordenar los fragmentos recuperados con un modelo de relevancia (p. ej. FlashRank) antes de dárselos al LLM.
+- **Búsqueda híbrida (BM25 + vectorial):** combinar búsqueda léxica y semántica para términos exactos como nombres propios, notas o cifras.
+- **Evaluación automática de respuestas:** medir la fidelidad de las respuestas a los fragmentos, no solo la recuperación.
 
 ## 7. Alcance y Conclusiones propias
 
-**¿Mejora realmente el RAG al modelo?**
-Sí, y donde más se nota es en los **datos concretos**. El modelo sin contexto acierta lo muy conocido (la nota de *Ex Machina*) pero se inventa lo específico (el número de votos, la nota media en SensaCine), y lo hace con total seguridad, lo que hace que el error sea difícil de detectar. Con RAG, las respuestas salen de nuestros documentos, citan la fuente y, cuando la información no está, el sistema lo reconoce en vez de inventar.
+**¿Mejora realmente el RAG al modelo?** Sí, y donde más se nota es en los **datos concretos**. El modelo sin contexto acierta lo muy conocido (la nota de *Ex Machina*) pero se inventa lo específico (el número de votos, la nota media en SensaCine), y lo hace con total seguridad, lo que hace que el error sea difícil de detectar. Con RAG, las respuestas salen de nuestros documentos, citan la fuente y, cuando la información no está, el sistema lo reconoce en vez de inventar.
 
-**¿Es realmente útil?**
-Para preguntas sobre su dominio, sí: permite consultar en lenguaje natural un corpus de críticas, tesis, artículos y reseñas que un LLM genérico no conoce o recuerda mal, y comprobar de dónde sale cada afirmación. Su límite está en el propio corpus: el sistema solo sabe lo que hemos recopilado, por lo que la calidad de la Fase A determina la calidad de todo lo demás.
+**¿Es realmente útil?** Para preguntas sobre su dominio, sí: permite consultar en lenguaje natural un corpus de críticas, tesis, artículos y reseñas que un LLM genérico no conoce o recuerda mal, y comprobar de dónde sale cada afirmación. Su límite está en el propio corpus: el sistema solo sabe lo que hemos recopilado, por lo que la calidad de la Fase A determina la calidad de todo lo demás.
 
 ### Extras
 
 El código completo está en el repositorio: <https://github.com/William-glj/RAG>. Para reproducir el sistema, ejecutar desde la raíz del proyecto:
 
-```bash
+``` bash
 python cargar_datos.py
 python scraping_criticas.py
 python limpiar_datos.py
@@ -492,7 +505,7 @@ quarto render
 ```
 
 | Script | Fase |
-|---|---|
+|------------------------------------|------------------------------------|
 | `cargar_datos.py`, `scraping_criticas.py`, `limpiar_datos.py` | A. Captación y limpieza |
 | `construir_indice.py`, `comparar_chunking.py`, `probar_recuperacion.py`, `rag_comun.py`, `config_rag.py` | B. RAG y chunking |
 | `sin_rag.py`, `con_rag.py`, `llm_comun.py` | C. Evaluación |
