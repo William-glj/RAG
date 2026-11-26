@@ -4120,12 +4120,15 @@ vertical-align: -.125em;
 </ul>
 <section id="fase-a-captación-automatizada-de-datos-data-pipeline" class="level2">
 <h2 class="anchored" data-anchor-id="fase-a-captación-automatizada-de-datos-data-pipeline">1. Fase A (Captación Automatizada de Datos (Data Pipeline))</h2>
-<p><strong>Justificación de la arquitectura RAG</strong> Mitigación de alucinaciones (Grounding): Mecanismo de control que restringe la generación del LLM únicamente a evidencia documental verificable, recuperada previamente a la síntesis de la respuesta.</p>
+<p><strong>Justificación de la arquitectura RAG</strong></p>
+<p>Mitigación de alucinaciones (Grounding): Mecanismo de control que restringe la generación del LLM únicamente a evidencia documental verificable, recuperada previamente a la síntesis de la respuesta.</p>
 <p>Inyección de conocimiento especializado y dinámico: Incorporación de información de dominio específico y análisis recientes que suplen los vacíos o la desactualización de los pesos preentrenados del modelo base.</p>
-<p><strong>Criterios de diseño del corpus documental</strong> Para garantizar respuestas precisas y contextualizadas sobre la tecnofobia y el impacto de la innovación, el corpus debe cumplir dos requisitos:</p>
+<p><strong>Criterios de diseño del corpus documental</strong></p>
+<p>Para garantizar respuestas precisas y contextualizadas sobre la tecnofobia y el impacto de la innovación, el corpus debe cumplir dos requisitos:</p>
 <p>Enriquecido (Diversidad): Integración de múltiples fuentes (prensa, crítica cultural, literatura académica y divulgación), tipologías textuales y enfoques (éticos, críticos, alarmistas) para evitar sesgos de perspectiva.</p>
 <p>Específico (Acotación temática): Selección estricta centrada en el miedo a la innovación y los avances tecnológicos, descartando otros subgéneros o tópicos generalistas de la ciencia ficción.</p>
-<p><strong>Taxonomía del corpus implementado</strong> La planificación teórica se materializó en dos ejes temáticos principales:</p>
+<p><strong>Taxonomía del corpus implementado</strong></p>
+<p>La planificación teórica se materializó en dos ejes temáticos principales:</p>
 <p>Inteligencia Artificial y Autómatas: Representaciones de entidades autónomas y sus conflictos (Metrópolis, HAL 9000, Blade Runner, Ex Machina, Her, Terminator).</p>
 <p>Miedos tecnológicos y evolución: Impacto social y antropológico (deshumanización industrial, complejo de Frankenstein, biotecnología y sistemas de vigilancia).</p>
 <p>La planificación cubría <strong>dos ramas</strong>: la <strong>IA</strong> (autómatas de <em>Metrópolis</em>, HAL 9000, <em>Blade Runner</em>, <em>Ex Machina</em>, <em>Her</em>, <em>Terminator</em>…) y los <strong>miedos y su evolución</strong> (deshumanización industrial, complejo de Frankenstein, biotecnología, vigilancia…).</p>
@@ -4224,6 +4227,26 @@ vertical-align: -.125em;
 <span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        time.sleep(<span class="dv">2</span> <span class="op">**</span> intento)      <span class="co"># backoff exponencial</span></span>
 <span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">continue</span></span>
 <span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    r.raise_for_status()</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
+<p><strong>Configuración de las consultas (cabecera de <code>cargar_datos.py</code>):</strong></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># cargar_datos.py · constantes de configuración</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>TMDB_TERMINOS_KEYWORD <span class="op">=</span> [<span class="st">&quot;artificial intelligence&quot;</span>, <span class="st">&quot;robot&quot;</span>, <span class="st">&quot;android&quot;</span>, <span class="st">&quot;cyborg&quot;</span>,</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>                         <span class="st">&quot;technology&quot;</span>, <span class="st">&quot;cyberpunk&quot;</span>, <span class="st">&quot;dystopia&quot;</span>]</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>TERMINOS_IA <span class="op">=</span> [<span class="st">&quot;artificial intelligence&quot;</span>, <span class="st">&quot;a.i.&quot;</span>, <span class="st">&quot;robot&quot;</span>, <span class="st">&quot;android&quot;</span>, <span class="st">&quot;cyborg&quot;</span>,</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>               <span class="st">&quot;machine&quot;</span>, <span class="st">&quot;technology&quot;</span>, <span class="st">&quot;cyberpunk&quot;</span>, <span class="st">&quot;dystopia&quot;</span>, <span class="st">&quot;singularity&quot;</span>,</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>               <span class="st">&quot;automata&quot;</span>, <span class="st">&quot;terminator&quot;</span>, <span class="st">&quot;blade runner&quot;</span>, <span class="st">&quot;ex machina&quot;</span>,</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>               <span class="st">&quot;ghost in the shell&quot;</span>, <span class="st">&quot;matrix&quot;</span>]</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>PELICULAS_CANONICAS <span class="op">=</span> [(<span class="st">&quot;2001 a space odyssey&quot;</span>, <span class="dv">1968</span>), (<span class="st">&quot;metropolis&quot;</span>, <span class="dv">1927</span>),</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>                       (<span class="st">&quot;blade runner&quot;</span>, <span class="dv">1982</span>), (<span class="st">&quot;the terminator&quot;</span>, <span class="dv">1984</span>),</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>                       (<span class="st">&quot;the matrix&quot;</span>, <span class="dv">1999</span>), (<span class="st">&quot;ex machina&quot;</span>, <span class="dv">2015</span>), ...]  <span class="co"># 34 en total</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>TMDB_PAGINAS_GENERO <span class="op">=</span> <span class="dv">5</span>    <span class="co"># páginas de /discover por género (20 pelis/pág)</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>TMDB_PAGINAS_KEYWORD <span class="op">=</span> <span class="dv">1</span>   <span class="co"># páginas de /discover por keyword</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>TMDB_MAX_DETALLES <span class="op">=</span> <span class="dv">200</span>    <span class="co"># máx. películas a las que pedimos detalles</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>TMDB_MAX_REVIEWS <span class="op">=</span> <span class="dv">60</span>      <span class="co"># máx. películas a las que pedimos reseñas</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>TMDB_PAUSA <span class="op">=</span> <span class="fl">0.28</span>          <span class="co"># pausa entre peticiones (~4 req/s)</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>USER_AGENT <span class="op">=</span> <span class="st">&quot;Mozilla/5.0 ...&quot;</span></span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
 <p>El enunciado permite <strong>4 tipos de fuentes</strong>; este script cubre <strong>2 de ellas</strong>:</p>
 <table class="caption-top table">
 <colgroup>
@@ -4252,29 +4275,29 @@ vertical-align: -.125em;
 <h3 class="anchored" data-anchor-id="scraping_criticas.py-extracción-web-pdfs-y-transcripción-de-vídeo">1.2. <code>scraping_criticas.py</code>: extracción web, PDFs y transcripción de vídeo</h3>
 <p><code>scraping_criticas.py</code> lee la lista de enlaces (<code>TARGETS</code>) y, de cada página, extrae <strong>únicamente el texto</strong> de la crítica o artículo, guardándolo en un <code>.txt</code> con cabecera de procedencia. Genera <strong>22 documentos de texto libre</strong>: 15 críticas web + 3 PDF académicos (vía <code>TARGETS</code>) y 4 transcripciones de YouTube (vía <code>VIDEOS</code>).</p>
 <p>Cada entrada de <code>TARGETS</code> es una tupla <code>(nombre, fuente, url, extractor)</code>:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># scraping_criticas.py · TARGETS  (cada fila = un documento del corpus)</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>(<span class="st">&quot;Blade Runner 2049 - la apoteosis de lo humano (CinemaNet)&quot;</span>,</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a> <span class="st">&quot;CinemaNet&quot;</span>,</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a> <span class="st">&quot;https://www.cinemanet.info/2018/01/analisis-blade-runner-2049-...&quot;</span>,</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a> <span class="st">&quot;cinemanet&quot;</span>),</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># scraping_criticas.py · TARGETS  (cada fila = un documento del corpus)</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>(<span class="st">&quot;Blade Runner 2049 - la apoteosis de lo humano (CinemaNet)&quot;</span>,</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a> <span class="st">&quot;CinemaNet&quot;</span>,</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a> <span class="st">&quot;https://www.cinemanet.info/2018/01/analisis-blade-runner-2049-...&quot;</span>,</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a> <span class="st">&quot;cinemanet&quot;</span>),</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
 <p><strong>Un extractor por sitio</strong> (cada web tiene un HTML distinto):</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>EXTRACTORES <span class="op">=</span> {</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;espinof&quot;</span>: extraer_espinof, <span class="st">&quot;sensacine&quot;</span>: extraer_sensacine,</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;lavanguardia&quot;</span>: extraer_lavanguardia, <span class="st">&quot;rogerebert&quot;</span>: extraer_rogerebert,</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;blogspot&quot;</span>: extraer_blogspot, <span class="st">&quot;theconversation&quot;</span>: extraer_theconversation,</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;cinemanet&quot;</span>: extraer_cinemanet, <span class="st">&quot;wordpress&quot;</span>: extraer_wordpress,</span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>EXTRACTORES <span class="op">=</span> {</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;espinof&quot;</span>: extraer_espinof, <span class="st">&quot;sensacine&quot;</span>: extraer_sensacine,</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;lavanguardia&quot;</span>: extraer_lavanguardia, <span class="st">&quot;rogerebert&quot;</span>: extraer_rogerebert,</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;blogspot&quot;</span>: extraer_blogspot, <span class="st">&quot;theconversation&quot;</span>: extraer_theconversation,</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;cinemanet&quot;</span>: extraer_cinemanet, <span class="st">&quot;wordpress&quot;</span>: extraer_wordpress,</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Cada extractor localiza el contenedor del artículo con selectores CSS (<code>select_one</code>) y extrae los párrafos con BeautifulSoup. Los PDFs se procesan con <code>extraer_pdf()</code> (<code>pypdf</code>) y los vídeos con <code>transcribir_video()</code> (<code>yt-dlp</code>). Las webs que bloquean el acceso automatizado (Roger Ebert, Cinéfilos Frustrados) se leen desde su copia en la Wayback Machine.</p>
 <p><strong>Robustez del scraping:</strong></p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># scraping_criticas.py · _get()  (reintentos ante 429/5xx)</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> intento <span class="kw">in</span> <span class="bu">range</span>(reintentos):</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    r <span class="op">=</span> requests.get(url, headers<span class="op">=</span>HEADERS, timeout<span class="op">=</span>timeout)</span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> r.status_code <span class="op">==</span> <span class="dv">200</span>:</span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> r</span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> r.status_code <span class="kw">in</span> (<span class="dv">429</span>, <span class="dv">500</span>, <span class="dv">502</span>, <span class="dv">503</span>, <span class="dv">504</span>) <span class="kw">and</span> intento <span class="op">&lt;</span> reintentos <span class="op">-</span> <span class="dv">1</span>:</span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>        time.sleep(<span class="dv">3</span> <span class="op">*</span> (intento <span class="op">+</span> <span class="dv">1</span>))   <span class="co"># espera creciente</span></span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">continue</span></span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    r.raise_for_status()</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># scraping_criticas.py · _get()  (reintentos ante 429/5xx)</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> intento <span class="kw">in</span> <span class="bu">range</span>(reintentos):</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    r <span class="op">=</span> requests.get(url, headers<span class="op">=</span>HEADERS, timeout<span class="op">=</span>timeout)</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> r.status_code <span class="op">==</span> <span class="dv">200</span>:</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> r</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> r.status_code <span class="kw">in</span> (<span class="dv">429</span>, <span class="dv">500</span>, <span class="dv">502</span>, <span class="dv">503</span>, <span class="dv">504</span>) <span class="kw">and</span> intento <span class="op">&lt;</span> reintentos <span class="op">-</span> <span class="dv">1</span>:</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>        time.sleep(<span class="dv">3</span> <span class="op">*</span> (intento <span class="op">+</span> <span class="dv">1</span>))   <span class="co"># espera creciente</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">continue</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    r.raise_for_status()</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Este script cubre las otras <strong>2 de las 4 fuentes</strong> del enunciado (<em>extracción web</em> y <em>documentos no estructurados</em>), más <strong>4 transcripciones de vídeo</strong>:</p>
 <table class="caption-top table">
 <colgroup>
@@ -4431,12 +4454,12 @@ vertical-align: -.125em;
 <h3 class="anchored" data-anchor-id="limpiar_datos.py-limpieza-y-normalización-del-corpus">1.3. <code>limpiar_datos.py</code>: limpieza y normalización del corpus</h3>
 <p><code>limpiar_datos.py</code> lee lo que generan los dos scripts anteriores y produce la versión limpia en <code>./datosDescargados/limpio</code>, aplicando <strong>cinco reglas</strong>: descarta nulos y duplicados, conserva <strong>solo</strong> las películas con texto recuperable, prioriza <code>relevante_ia</code> y limpia el texto de las críticas (pies de página, portadas, números de página).</p>
 <p><strong>Segundo filtro de especificidad</strong> (sobre el cruce IMDb↔︎TMDB):</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># limpiar_datos.py · limpiar_csvs()</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>tiene_nota <span class="op">=</span> cruce[<span class="st">&quot;rating_imdb&quot;</span>].notna() <span class="op">|</span> cruce[<span class="st">&quot;rating_tmdb&quot;</span>].notna()</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>has_review <span class="op">=</span> (cruce[<span class="st">&quot;imdb_id&quot;</span>].isin(review_imdb_ids)</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>              <span class="op">|</span> cruce[<span class="st">&quot;imdb_id&quot;</span>].isin(<span class="bu">set</span>(scraped_count)))</span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>conservar  <span class="op">=</span> tiene_nota <span class="op">&amp;</span> has_review   <span class="co"># SOLO películas con reseña de texto</span></span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>master     <span class="op">=</span> cruce.loc[conservar]</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># limpiar_datos.py · limpiar_csvs()</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>tiene_nota <span class="op">=</span> cruce[<span class="st">&quot;rating_imdb&quot;</span>].notna() <span class="op">|</span> cruce[<span class="st">&quot;rating_tmdb&quot;</span>].notna()</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>has_review <span class="op">=</span> (cruce[<span class="st">&quot;imdb_id&quot;</span>].isin(review_imdb_ids)</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>              <span class="op">|</span> cruce[<span class="st">&quot;imdb_id&quot;</span>].isin(<span class="bu">set</span>(scraped_count)))</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>conservar  <span class="op">=</span> tiene_nota <span class="op">&amp;</span> has_review   <span class="co"># SOLO películas con reseña de texto</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>master     <span class="op">=</span> cruce.loc[conservar]</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
 <p><strong>Limpieza del texto</strong> (críticas y PDFs):</p>
 <ul>
 <li><code>_BOILERPLATE</code>: expresiones regulares que eliminan pies de página, suscripciones, “te puede interesar”, avisos legales…</li>
@@ -4528,14 +4551,14 @@ vertical-align: -.125em;
 <h3 class="anchored" data-anchor-id="modelo-de-embeddings-intfloatmultilingual-e5-small">2.3. Modelo de embeddings: <code>intfloat/multilingual-e5-small</code></h3>
 <p>El corpus mezcla <strong>español</strong> (críticas, tesis, artículos) e <strong>inglés</strong> (reseñas de TMDB, Roger Ebert), por lo que el modelo debe ser <strong>multilingüe</strong>. Elegimos <code>multilingual-e5-small</code> (384 dimensiones) y <strong>descartamos</strong> <code>paraphrase-multilingual-MiniLM-L12-v2</code> porque trunca cada texto a 128 tokens (~500 caracteres): con fragmentos de 1 500 caracteres, la mitad del fragmento quedaría fuera del embedding.</p>
 <p>Los modelos <strong>E5</strong> exigen un prefijo que distingue los dos usos: <code>&quot;passage: &quot;</code> al indexar y <code>&quot;query: &quot;</code> al consultar. Nuestra clase <code>EmbeddingsE5</code> los añade automáticamente:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># rag_comun.py · EmbeddingsE5</span></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> embed_documents(<span class="va">self</span>, texts):</span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    textos <span class="op">=</span> [<span class="va">self</span>.prefijo_documento <span class="op">+</span> t <span class="cf">for</span> t <span class="kw">in</span> texts]   <span class="co"># &quot;passage: &quot;</span></span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="va">self</span>.modelo.encode(textos, normalize_embeddings<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> embed_query(<span class="va">self</span>, text):</span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="va">self</span>.modelo.encode(<span class="va">self</span>.prefijo_consulta <span class="op">+</span> text,  <span class="co"># &quot;query: &quot;</span></span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>                              normalize_embeddings<span class="op">=</span><span class="va">True</span>)</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># rag_comun.py · EmbeddingsE5</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> embed_documents(<span class="va">self</span>, texts):</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    textos <span class="op">=</span> [<span class="va">self</span>.prefijo_documento <span class="op">+</span> t <span class="cf">for</span> t <span class="kw">in</span> texts]   <span class="co"># &quot;passage: &quot;</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="va">self</span>.modelo.encode(textos, normalize_embeddings<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> embed_query(<span class="va">self</span>, text):</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="va">self</span>.modelo.encode(<span class="va">self</span>.prefijo_consulta <span class="op">+</span> text,  <span class="co"># &quot;query: &quot;</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>                              normalize_embeddings<span class="op">=</span><span class="va">True</span>)</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="estrategia-de-chunking" class="level3">
 <h3 class="anchored" data-anchor-id="estrategia-de-chunking">2.4. Estrategia de chunking</h3>
@@ -4545,12 +4568,12 @@ vertical-align: -.125em;
 <li><strong><code>chunk_overlap = 225</code></strong> (15 %), para no cortar una idea a mitad.</li>
 <li><strong>Separadores</strong> <code>[&quot;\n\n&quot;, &quot;\n&quot;, &quot;. &quot;, &quot; &quot;, &quot;&quot;]</code>: corta primero por párrafo, luego por línea, luego por frase y por palabra. Respeta la estructura del texto (solo parte una palabra como último recurso).</li>
 </ul>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># construir_indice.py · trocear()</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>splitter <span class="op">=</span> RecursiveCharacterTextSplitter(</span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    chunk_size<span class="op">=</span>chunk_size, chunk_overlap<span class="op">=</span>chunk_overlap,</span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    separators<span class="op">=</span>[<span class="st">&quot;</span><span class="ch">\n\n</span><span class="st">&quot;</span>, <span class="st">&quot;</span><span class="ch">\n</span><span class="st">&quot;</span>, <span class="st">&quot;. &quot;</span>, <span class="st">&quot; &quot;</span>, <span class="st">&quot;&quot;</span>],</span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    length_function<span class="op">=</span><span class="bu">len</span>,</span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># construir_indice.py · trocear()</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>splitter <span class="op">=</span> RecursiveCharacterTextSplitter(</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    chunk_size<span class="op">=</span>chunk_size, chunk_overlap<span class="op">=</span>chunk_overlap,</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    separators<span class="op">=</span>[<span class="st">&quot;</span><span class="ch">\n\n</span><span class="st">&quot;</span>, <span class="st">&quot;</span><span class="ch">\n</span><span class="st">&quot;</span>, <span class="st">&quot;. &quot;</span>, <span class="st">&quot; &quot;</span>, <span class="st">&quot;&quot;</span>],</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    length_function<span class="op">=</span><span class="bu">len</span>,</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Reglas específicas:</p>
 <ul>
 <li>Las <strong>fichas de película no se trocean</strong> (una ficha ya es la unidad mínima con sentido).</li>
@@ -4668,13 +4691,13 @@ vertical-align: -.125em;
 <h3 class="anchored" data-anchor-id="metodología">3.1. Metodología</h3>
 <p>Las preguntas se lanzan en la aplicación en modo <strong>“Comparar ambos”</strong>: el <strong>mismo modelo</strong> (<code>gemini-3.1-flash-lite</code>) responde primero sin contexto y después con los <code>k = 5</code> fragmentos recuperados de ChromaDB. Así la única diferencia entre las dos respuestas es el RAG.</p>
 <p>Con RAG, el prompt de sistema obliga al modelo a usar <strong>solo</strong> los fragmentos, a <strong>citarlos</strong> y a reconocer cuando no sabe algo:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># con_rag.py · prompt de sistema</span></span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>SISTEMA <span class="op">=</span> (</span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Eres un asistente especializado en cine de ciencia ficción. Responde en español &quot;</span></span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;usando EXCLUSIVAMENTE la información de los fragmentos proporcionados. Cita entre &quot;</span></span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;corchetes los fragmentos que uses, por ejemplo [2]. Si la respuesta no aparece en &quot;</span></span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;los fragmentos, responde: &#39;No hay información suficiente en la base de datos.&#39;&quot;</span></span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># con_rag.py · prompt de sistema</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>SISTEMA <span class="op">=</span> (</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Eres un asistente especializado en cine de ciencia ficción. Responde en español &quot;</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;usando EXCLUSIVAMENTE la información de los fragmentos proporcionados. Cita entre &quot;</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;corchetes los fragmentos que uses, por ejemplo [2]. Si la respuesta no aparece en &quot;</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;los fragmentos, responde: &#39;No hay información suficiente en la base de datos.&#39;&quot;</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
 <p>A continuación se muestran <strong>dos pruebas</strong>, ejecutadas en la aplicación desplegada (capturas reales).</p>
 </section>
 <section id="prueba-1-nota-y-votos-de-ex-machina-en-imdb" class="level3">
@@ -4791,20 +4814,20 @@ vertical-align: -.125em;
 </figure>
 </div>
 <p>Los recursos pesados (modelo de embeddings e índice) se cargan una sola vez con <code>@st.cache_resource</code>:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># app.py</span></span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="at">@st.cache_resource</span>(show_spinner<span class="op">=</span><span class="st">&quot;Cargando el modelo de embeddings y el índice...&quot;</span>)</span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> obtener_base():</span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> abrir_base(cfg.INDICE_DIR, EmbeddingsE5())</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># app.py</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="at">@st.cache_resource</span>(show_spinner<span class="op">=</span><span class="st">&quot;Cargando el modelo de embeddings y el índice...&quot;</span>)</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> obtener_base():</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> abrir_base(cfg.INDICE_DIR, EmbeddingsE5())</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="despliegue-público" class="level3">
 <h3 class="anchored" data-anchor-id="despliegue-público">4.2. Despliegue público</h3>
 <p>La aplicación está desplegada en <strong>Streamlit Community Cloud</strong> → <a href="https://rtdgrag.streamlit.app/" class="uri">https://rtdgrag.streamlit.app/</a>. La plataforma lee el repositorio de GitHub e instala <code>requirements.txt</code>. Las claves se inyectan como <strong>secretos</strong> (<code>st.secrets</code>, formato TOML) y <code>cargar_secretos()</code> las copia al entorno para que <code>llm_comun.py</code> las lea igual que desde el <code>.env</code> local:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># app.py</span></span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> cargar_secretos() <span class="op">-&gt;</span> <span class="va">None</span>:</span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> variables <span class="kw">in</span> VARIABLES.values():</span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> clave <span class="kw">in</span> variables:</span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> clave <span class="kw">in</span> st.secrets:</span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>                os.environ[clave] <span class="op">=</span> <span class="bu">str</span>(st.secrets[clave])</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># app.py</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> cargar_secretos() <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> variables <span class="kw">in</span> VARIABLES.values():</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> clave <span class="kw">in</span> variables:</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> clave <span class="kw">in</span> st.secrets:</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>                os.environ[clave] <span class="op">=</span> <span class="bu">str</span>(st.secrets[clave])</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
 <p>El índice <code>indice_chroma/</code> se versiona en el repositorio (~18 MB) para no tener que reconstruirlo en la nube.</p>
 <div class="callout callout-style-default callout-note callout-titled">
 <div class="callout-header d-flex align-content-center">
@@ -4830,18 +4853,18 @@ vertical-align: -.125em;
 <section id="filtros-de-metadatos" class="level3">
 <h3 class="anchored" data-anchor-id="filtros-de-metadatos">5.1. Filtros de metadatos</h3>
 <p>Antes de la búsqueda vectorial se puede filtrar por <strong>tipo de documento</strong> (<code>critica</code>, <code>resena</code>, <code>academico</code>, <code>divulgacion</code>, <code>ficha</code>, <code>opinion_espectadores</code>) y por <strong>relevancia a IA</strong> (<code>relevante_ia</code>), mediante el filtro de metadatos de Chroma:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># rag_comun.py · construir_filtro()</span></span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> construir_filtro(tipo<span class="op">=</span><span class="va">None</span>, solo_relevantes_ia<span class="op">=</span><span class="va">False</span>):</span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    condiciones <span class="op">=</span> []</span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> tipo:</span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>        condiciones.append({<span class="st">&quot;tipo&quot;</span>: tipo})</span>
-<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> solo_relevantes_ia:</span>
-<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>        condiciones.append({<span class="st">&quot;relevante_ia&quot;</span>: <span class="va">True</span>})</span>
-<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> condiciones:</span>
-<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">None</span>                      <span class="co"># sin filtro</span></span>
-<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="bu">len</span>(condiciones) <span class="op">==</span> <span class="dv">1</span>:</span>
-<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> condiciones[<span class="dv">0</span>]</span>
-<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> {<span class="st">&quot;$and&quot;</span>: condiciones}</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># rag_comun.py · construir_filtro()</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> construir_filtro(tipo<span class="op">=</span><span class="va">None</span>, solo_relevantes_ia<span class="op">=</span><span class="va">False</span>):</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    condiciones <span class="op">=</span> []</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> tipo:</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>        condiciones.append({<span class="st">&quot;tipo&quot;</span>: tipo})</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> solo_relevantes_ia:</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>        condiciones.append({<span class="st">&quot;relevante_ia&quot;</span>: <span class="va">True</span>})</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> condiciones:</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">None</span>                      <span class="co"># sin filtro</span></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="bu">len</span>(condiciones) <span class="op">==</span> <span class="dv">1</span>:</span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> condiciones[<span class="dv">0</span>]</span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> {<span class="st">&quot;$and&quot;</span>: condiciones}</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Esto permite preguntas como <em>“miedo a la IA”</em> restringidas a reseñas de usuarios, a textos académicos o solo a películas marcadas como relevantes, refinando la recuperación antes de llamar al LLM. En la aplicación se controla desde la barra lateral.</p>
 </section>
 <section id="resumen-final-del-apartado-4" class="level3">
@@ -4881,15 +4904,15 @@ vertical-align: -.125em;
 <section id="extras" class="level3">
 <h3 class="anchored" data-anchor-id="extras">Extras</h3>
 <p>El código completo está en el repositorio: <a href="https://github.com/William-glj/RAG" class="uri">https://github.com/William-glj/RAG</a>. Para reproducir el sistema, ejecutar desde la raíz del proyecto:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb14"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> cargar_datos.py</span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> scraping_criticas.py</span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> limpiar_datos.py</span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> construir_indice.py</span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> comparar_chunking.py</span>
-<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> sin_rag.py</span>
-<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> con_rag.py</span>
-<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a><span class="ex">streamlit</span> run app.py</span>
-<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto</span> render</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb15"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> cargar_datos.py</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> scraping_criticas.py</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> limpiar_datos.py</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> construir_indice.py</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> comparar_chunking.py</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> sin_rag.py</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> con_rag.py</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a><span class="ex">streamlit</span> run app.py</span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto</span> render</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 50%">
