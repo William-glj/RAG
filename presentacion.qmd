@@ -15,11 +15,13 @@ En este proyecto construimos y desplegamos un sistema RAG (*Retrieval-Augmented 
 ## 1. Fase A (Captación Automatizada de Datos (Data Pipeline))
 
 **Justificación de la arquitectura RAG**
+
 Mitigación de alucinaciones (Grounding): Mecanismo de control que restringe la generación del LLM únicamente a evidencia documental verificable, recuperada previamente a la síntesis de la respuesta.
 
 Inyección de conocimiento especializado y dinámico: Incorporación de información de dominio específico y análisis recientes que suplen los vacíos o la desactualización de los pesos preentrenados del modelo base.
 
 **Criterios de diseño del corpus documental**
+
 Para garantizar respuestas precisas y contextualizadas sobre la tecnofobia y el impacto de la innovación, el corpus debe cumplir dos requisitos:
 
 Enriquecido (Diversidad): Integración de múltiples fuentes (prensa, crítica cultural, literatura académica y divulgación), tipologías textuales y enfoques (éticos, críticos, alarmistas) para evitar sesgos de perspectiva.
@@ -27,6 +29,7 @@ Enriquecido (Diversidad): Integración de múltiples fuentes (prensa, crítica c
 Específico (Acotación temática): Selección estricta centrada en el miedo a la innovación y los avances tecnológicos, descartando otros subgéneros o tópicos generalistas de la ciencia ficción.
 
 **Taxonomía del corpus implementado**
+
 La planificación teórica se materializó en dos ejes temáticos principales:
 
 Inteligencia Artificial y Autómatas: Representaciones de entidades autónomas y sus conflictos (Metrópolis, HAL 9000, Blade Runner, Ex Machina, Her, Terminator).
@@ -102,6 +105,30 @@ for intento in range(reintentos):
         time.sleep(2 ** intento)      # backoff exponencial
         continue
     r.raise_for_status()
+```
+
+**Configuración de las consultas (cabecera de `cargar_datos.py`):**
+
+``` python
+# cargar_datos.py · constantes de configuración
+TMDB_TERMINOS_KEYWORD = ["artificial intelligence", "robot", "android", "cyborg",
+                         "technology", "cyberpunk", "dystopia"]
+
+TERMINOS_IA = ["artificial intelligence", "a.i.", "robot", "android", "cyborg",
+               "machine", "technology", "cyberpunk", "dystopia", "singularity",
+               "automata", "terminator", "blade runner", "ex machina",
+               "ghost in the shell", "matrix"]
+
+PELICULAS_CANONICAS = [("2001 a space odyssey", 1968), ("metropolis", 1927),
+                       ("blade runner", 1982), ("the terminator", 1984),
+                       ("the matrix", 1999), ("ex machina", 2015), ...]  # 34 en total
+
+TMDB_PAGINAS_GENERO = 5    # páginas de /discover por género (20 pelis/pág)
+TMDB_PAGINAS_KEYWORD = 1   # páginas de /discover por keyword
+TMDB_MAX_DETALLES = 200    # máx. películas a las que pedimos detalles
+TMDB_MAX_REVIEWS = 60      # máx. películas a las que pedimos reseñas
+TMDB_PAUSA = 0.28          # pausa entre peticiones (~4 req/s)
+USER_AGENT = "Mozilla/5.0 ..."
 ```
 
 El enunciado permite **4 tipos de fuentes**; este script cubre **2 de ellas**:
