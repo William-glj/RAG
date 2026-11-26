@@ -258,15 +258,15 @@ def embed_query(self, text):
 
 Usamos **`RecursiveCharacterTextSplitter`** (chunking recursivo) con estos parámetros:
 
-- **`chunk_size = 1500`** caracteres (~240 tokens de media, por debajo del límite de 512 tokens de E5).
+- **`chunk_size = 1500`** caracteres (~265 tokens de media, por debajo del límite de 512 tokens de E5).
 - **`chunk_overlap = 225`** (15 %), para no cortar una idea a mitad.
-- **Separadores** `["\n\n", "\n", ". ", " ", ""]`: corta primero por párrafo, luego por línea, luego por frase y por palabra. Respeta la estructura del texto (nunca parte una palabra).
+- **Separadores** `["\n\n", "\n", ". ", " ", ""]`: corta primero por párrafo, luego por línea, luego por frase y por palabra. Respeta la estructura del texto (solo parte una palabra como último recurso).
 
 ```python
 # construir_indice.py · trocear()
 splitter = RecursiveCharacterTextSplitter(
     chunk_size=chunk_size, chunk_overlap=chunk_overlap,
-    separators=["\n\n", "\n", ". ", " ", ""], keep_separator="end",
+    separators=["\n\n", "\n", ". ", " ", ""],
     length_function=len,
 )
 ```
@@ -279,39 +279,40 @@ Reglas específicas:
 
 ### 2.5. ¿Cómo afecta el tamaño del chunk a la recuperación?
 
-- **Chunks pequeños** → búsqueda más precisa, pero menos contexto: una idea puede quedar repartida en varios fragmentos.
-- **Chunks grandes** → más contexto por fragmento, pero diluyen la señal semántica (el embedding mezcla varias ideas) y pueden superar el límite de tokens del modelo.
+El tamaño es un compromiso:
 
-Lo **validamos empíricamente** con `comparar_chunking.py`, que reconstruye el índice con tres tamaños y lanza las mismas preguntas de prueba midiendo `acierto@5` y **MRR** (la posición media del primer acierto):
+- **Chunks pequeños** → búsqueda más precisa, pero menos contexto: una idea puede quedar repartida en varios fragmentos y el LLM recibe trozos sueltos.
+- **Chunks grandes** → más contexto por fragmento, pero diluyen la señal semántica (el embedding mezcla varias ideas) y pueden superar el límite de **512 tokens** de E5, que ignora lo que pase de ahí.
 
-| Tamaño | Solape | Fragmentos | Long. media | acierto@5 | MRR |
-|---|---|---|---|---|---|
-| 500 | 75 | 3 733 | 437 | **0.929** | 0.768 |
-| 1 000 | 150 | 1 919 | 789 | 0.714 | 0.679 |
-| **1 500** | **225** | **1 387** | **1 068** | 0.857 | **0.774** |
+Lo medimos con las **14 preguntas de prueba** de `config_rag.py` y el mismo criterio de acierto que `comparar_chunking.py`, sobre el mismo corpus y con solapamiento del 15 %. Probamos cuatro tamaños con el troceado recursivo y, para comparar estrategias, un troceado de **tamaño fijo** de 1500 (corta cada 1500 caracteres sin respetar párrafos ni frases). Para cada variante medimos la **recuperación** y también **lo que recibe el LLM**:
 
-El tamaño de 500 obtiene el mayor `acierto@5` (13/14), pero genera **3 733 fragmentos** (casi el triple) de solo ~437 caracteres, que pierden contexto. El tamaño de **1 500** ofrece el **mejor MRR** (0.774, encuentra antes el fragmento correcto), recupera 12/14 con fragmentos mucho más ricos (~1 068 caracteres de media) y un índice 2,7× más pequeño. Elegimos **1 500** por ese equilibrio entre tasa de acierto, contexto por fragmento y eficiencia del índice.
+- **hit@1 / hit@5**: proporción de preguntas con un fragmento correcto en el 1.^er^ puesto / entre los 5 primeros.
+- **MRR**: media de 1/posición del primer fragmento correcto (1 = siempre el primero; 0,5 = de media en el segundo puesto). Entre paréntesis, su intervalo de confianza del 95 % (*bootstrap*).
+- **Contexto top-5**: caracteres que recibe el LLM con los 5 fragmentos recuperados.
+- **> 512 tokens**: fragmentos que el modelo de embeddings no puede leer enteros.
 
-*Nota metodológica: la métrica `acierto@5` es orientativa: comprueba que una palabra clave aparezca en el fragmento recuperado, no que la respuesta sea correcta. La calidad real de la recuperación se valida con el LLM en la Fase C.*
+| Variante | Fragmentos | hit@1 | hit@5 | MRR (IC 95 %) | Contexto top-5 | > 512 tokens |
+|---|---|---|---|---|---|---|
+| recursivo 500 | 3 728 | 0.786 | 0.929 | 0.833 (0.64–1.00) | 2 405 | 0 % |
+| recursivo 1000 | 1 914 | 0.571 | 0.714 | 0.643 (0.39–0.86) | 4 539 | 0 % |
+| **recursivo 1500** | **1 385** | **0.714** | **0.929** | **0.798 (0.61–0.95)** | **6 649** | **0,1 %** |
+| recursivo 2000 | 1 096 | 0.714 | 0.929 | 0.786 (0.59–0.95) | 8 280 | 10 % |
+| fijo 1500 | 1 291 | 0.786 | 0.929 | 0.857 (0.68–1.00) | 7 541 | 0,2 % |
 
-### 2.6. Indexado
+![Calidad de recuperación (MRR, barras con su intervalo de confianza) frente al contexto que recibe el LLM (línea), por variante.](img/chunking_mrr_contexto.svg)
 
-`construir_indice.py` borra el índice anterior y lo reconstruye desde cero (proceso **repetible**), insertando en lotes:
+**Decisión: troceado recursivo de 1 500 caracteres con 225 de solapamiento.**
 
-```python
-# construir_indice.py · construir()
-_borrar_indice(indice_dir)                 # índice anterior fuera
-base = abrir_base(indice_dir, embeddings)  # Chroma con espacio coseno
-for i in range(0, len(fragmentos), cfg.LOTE_CHROMA):
-    lote = fragmentos[i:i + cfg.LOTE_CHROMA]
-    base.add_documents(lote, ids=[f.metadata["chunk_id"] for f in lote])
-```
+- **Recupera igual que los demás:** encuentra la respuesta entre los 5 primeros en 13 de 14 preguntas, como 500 y 2000. Su MRR (0,798) queda a 0,035 del de 500, lo que equivale a **media pregunta**.
+- **Da mucho más contexto al LLM:** 6 649 caracteres frente a 2 405 con 500 (**2,8 veces más**), con un índice **2,7 veces más pequeño** (1 385 fragmentos frente a 3 728).
+- **No subimos a 2000** porque el **10 %** de sus fragmentos supera los 512 tokens y el modelo ignora su final; con 1500 solo ocurre en 2 de 1 385.
+- **El tamaño fijo** sale algo mejor en MRR (0,857, una pregunta más en primer puesto), pero corta palabras y frases por la mitad: los fragmentos empiezan y terminan a media palabra, lo que empeora el texto que lee el LLM y que se cita. Por eso mantenemos el recursivo.
 
-### 2.7. Resumen final del apartado
+### 2.6. Resumen final del apartado
 
 ¿Qué estamos viendo y haciendo?
 
-Hemos partido del corpus limpio de la fase anterior y lo hemos convertido en **1 387 fragmentos** con embeddings multilingües guardados en ChromaDB. El tamaño del fragmento no es arbitrario: lo elegimos **midiendo** tres alternativas con las mismas preguntas. Cada fragmento conserva sus metadatos (tipo de documento, película, fuente, relevancia a IA), que después usamos para citar la procedencia y para filtrar la búsqueda.
+Hemos partido del corpus limpio de la fase anterior y lo hemos convertido en **1 387 fragmentos** con embeddings multilingües guardados en ChromaDB. El tamaño del fragmento no es arbitrario: lo elegimos **midiendo** cinco variantes con las mismas preguntas y comprobando el contexto que recibe el LLM y el límite de tokens del modelo. Cada fragmento conserva sus metadatos (tipo de documento, película, fuente, relevancia a IA), que después usamos para citar la procedencia y para filtrar la búsqueda.
 
 ## 3. Fase C (Evaluación Comparativa (Sin RAG vs. Con RAG))
 
