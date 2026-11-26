@@ -198,15 +198,15 @@ Mostramos **dos pruebas** reales hechas en la app desplegada 👉
 
 ## Prueba 1 · Lo que recuperó ChromaDB
 
-![](img/prueba1_fragmentos.png){fig-align="center" height="520"}
+![](img/prueba1_fragmentos.png){fig-align="center" width="90%"}
 
-El fragmento [1] es la **ficha de la película** que generó nuestro pipeline (distancia 0.119, la más cercana).
+El fragmento [1] es la **ficha de la película** generada por nuestro pipeline (distancia 0.119, la más cercana).
 
 ## Prueba 2 · ¿Qué opinan los espectadores de SensaCine sobre *2001*? {.smaller}
 
-![](img/prueba2_sensacine.png){fig-align="center" height="430"}
+![](img/prueba2_sensacine.png){fig-align="center" height="360"}
 
-❌ **Sin RAG:** inventa una "nota media de **4.2 sobre 5**" y da opiniones genéricas, que valdrían para cualquier clásico. &nbsp; ✅ **Con RAG:** cita **opiniones reales** ("obra maestra", "la más sobrevalorada de la historia", "petardo") indicando el fragmento de cada una.
+❌ **Sin RAG:** inventa una "nota media de **4.2 sobre 5**" y opiniones genéricas. ✅ **Con RAG:** cita **opiniones reales** ("obra maestra", "petardo"…) con su fragmento.
 
 ## Conclusión de la evaluación
 
