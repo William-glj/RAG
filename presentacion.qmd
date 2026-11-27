@@ -459,40 +459,13 @@ Inicialmente se consideró HF Spaces, pero desde 2025 los Spaces con SDK Docker/
 
 La aplicación permite a cualquier usuario hacer preguntas al sistema en tiempo real y **ver la diferencia** entre las respuestas con y sin RAG en la misma pantalla, junto con los fragmentos en los que se basa cada respuesta. Está desplegada públicamente sin exponer ninguna clave de API.
 
-## 5. Fase E (Técnicas Avanzadas de RAG)
-
-### 5.1. Filtros de metadatos
-
-Antes de la búsqueda vectorial se puede filtrar por **tipo de documento** (`critica`, `resena`, `academico`, `divulgacion`, `ficha`, `opinion_espectadores`) y por **relevancia a IA** (`relevante_ia`), mediante el filtro de metadatos de Chroma:
-
-``` python
-# rag_comun.py · construir_filtro()
-def construir_filtro(tipo=None, solo_relevantes_ia=False):
-    condiciones = []
-    if tipo:
-        condiciones.append({"tipo": tipo})
-    if solo_relevantes_ia:
-        condiciones.append({"relevante_ia": True})
-    if not condiciones:
-        return None                      # sin filtro
-    if len(condiciones) == 1:
-        return condiciones[0]
-    return {"$and": condiciones}
-```
-
-Esto permite preguntas como *"miedo a la IA"* restringidas a reseñas de usuarios, a textos académicos o solo a películas marcadas como relevantes, refinando la recuperación antes de llamar al LLM. En la aplicación se controla desde la barra lateral.
-
-### 5.2. Resumen final del apartado
-
-De las técnicas avanzadas propuestas hemos implementado los **filtros de metadatos**, integrados tanto en los scripts (`--tipo`, `--solo-ia`) como en la interfaz web. El reranking y la búsqueda híbrida quedan como trabajo futuro.
-
-## 6. Limitaciones, Reproducción y Trabajo Futuro
+## 5. Limitaciones, Reproducción y Trabajo Futuro
 
 El sistema debe entenderse como una **prueba de concepto académica**. Funciona bien sobre su corpus, pero su alcance está acotado por el tamaño y la naturaleza de los datos.
 
 ------------------------------------------------------------------------
 
-### 6.1. Análisis Crítico
+### 5.1. Análisis Crítico
 
 - **Tamaño del corpus:** con unas 59 películas y 22 documentos, los resultados son orientativos y no generalizables.
 - **Métrica de recuperación orientativa:** `acierto@5` solo comprueba que aparezca una palabra clave en el fragmento recuperado; no mide si la respuesta final es correcta.
@@ -503,13 +476,13 @@ El sistema debe entenderse como una **prueba de concepto académica**. Funciona 
 
 ------------------------------------------------------------------------
 
-### 6.2. Líneas de Mejora
+### 5.2. Líneas de Mejora
 
 - **Reranking:** reordenar los fragmentos recuperados con un modelo de relevancia (p. ej. FlashRank) antes de dárselos al LLM.
 - **Búsqueda híbrida (BM25 + vectorial):** combinar búsqueda léxica y semántica para términos exactos como nombres propios, notas o cifras.
 - **Evaluación automática de respuestas:** medir la fidelidad de las respuestas a los fragmentos, no solo la recuperación.
 
-## 7. Alcance y Conclusiones propias
+## 6. Alcance y Conclusiones propias
 
 **¿Mejora realmente el RAG al modelo?** Sí, y donde más se nota es en los **datos concretos**. El modelo sin contexto acierta lo muy conocido (la nota de *Ex Machina*) pero se inventa lo específico (el número de votos, la nota media en SensaCine), y lo hace con total seguridad, lo que hace que el error sea difícil de detectar. Con RAG, las respuestas salen de nuestros documentos, citan la fuente y, cuando la información no está, el sistema lo reconoce en vez de inventar.
 
