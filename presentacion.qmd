@@ -274,7 +274,7 @@ Así, todo el pipeline de la Fase B se reduce a una cadena legible y repetible: 
 Elegimos **ChromaDB** por cuatro motivos:
 
 1.  **Persistencia en disco** (`persist_directory`): no hace falta levantar un servidor; el índice vive en `indice_chroma/`.
-2.  **Filtros de metadatos nativos** (`filter`): los usamos para filtrar por tipo de documento y por relevancia a IA.
+2.  **Filtros de metadatos nativos** (`filter`): los usamos para filtrar por tipo de documento.
 3.  **Integración con LangChain** (`langchain-chroma`).
 4.  **Código abierto y ligero**: el corpus (\~1 400 fragmentos) cabe holgadamente.
 
